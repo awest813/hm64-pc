@@ -165,12 +165,19 @@ RECOMP_PATCH void sramWrite(uint8_t* rdram, recomp_context* ctx) {
         return; // error already logged in open_save_file_rw()
     }
 
+    bool write_succeeded = false;
     if (fseek(f, (long)offset, SEEK_SET) != 0) {
         fprintf(stderr, "[hm64_pc] sramWrite: seek to offset 0x%X failed\n", offset);
     } else if (fwrite(src, 1, size, f) != size) {
         fprintf(stderr, "[hm64_pc] sramWrite: short write at offset 0x%X\n", offset);
-    } else if (fflush(f) != 0) {
+    } else {
+        write_succeeded = true;
+    }
+
+    if (write_succeeded && fflush(f) != 0) {
         fprintf(stderr, "[hm64_pc] sramWrite: flush failed at offset 0x%X\n", offset);
     }
-    fclose(f);
+    if (fclose(f) != 0) {
+        fprintf(stderr, "[hm64_pc] sramWrite: close failed at offset 0x%X\n", offset);
+    }
 }
