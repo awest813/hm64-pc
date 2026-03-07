@@ -69,6 +69,16 @@ void render_frame(void* /*renderer*/,
     // Poll input every frame here as a convenience.
     hm64::input::poll();
 
+    // If the user closed the window or pressed Escape, hm64::input::poll()
+    // already consumed the SDL_QUIT / SDL_KEYDOWN(Escape) events.
+    // Re-inject a synthetic SDL_QUIT so ultramodern's own event loop also
+    // sees the request and can shut down cleanly.
+    if (hm64::input::should_quit()) {
+        SDL_Event quit_event{};
+        quit_event.type = SDL_QUIT;
+        SDL_PushEvent(&quit_event);
+    }
+
     // RT64 handles the actual buffer swap via the SDL window handle.
     // If using the software fallback, update/present would happen here.
 }

@@ -24,6 +24,13 @@ static SDL_AudioDeviceID s_dev = 0;
 static constexpr int SAMPLE_RATE = 32000;
 
 bool init() {
+    // Guard against double-initialisation: ultramodern may call the init
+    // callback it was given AND main() calls init() explicitly before
+    // ultramodern::start().  The second call must be a no-op.
+    if (s_dev != 0) {
+        return true;
+    }
+
     if (SDL_InitSubSystem(SDL_INIT_AUDIO) != 0) {
         fprintf(stderr, "[hm64::audio] SDL_InitSubSystem(AUDIO) failed: %s\n",
                 SDL_GetError());
@@ -42,6 +49,7 @@ bool init() {
     if (s_dev == 0) {
         fprintf(stderr, "[hm64::audio] SDL_OpenAudioDevice failed: %s\n",
                 SDL_GetError());
+        SDL_QuitSubSystem(SDL_INIT_AUDIO);
         return false;
     }
 
@@ -50,10 +58,15 @@ bool init() {
 }
 
 void deinit() {
-    if (s_dev != 0) {
-        SDL_CloseAudioDevice(s_dev);
-        s_dev = 0;
+    // Guard against double-deinit for the same reason as init(): if ultramodern
+    // calls our deinit callback and main() also calls it during cleanup, the
+    // second call must be a no-op so we don't close an already-closed device or
+    // call SDL_QuitSubSystem one too many times.
+    if (s_dev == 0) {
+        return;
     }
+    SDL_CloseAudioDevice(s_dev);
+    s_dev = 0;
     SDL_QuitSubSystem(SDL_INIT_AUDIO);
 }
 
