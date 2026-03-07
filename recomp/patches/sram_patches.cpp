@@ -169,6 +169,8 @@ RECOMP_PATCH void sramWrite(uint8_t* rdram, recomp_context* ctx) {
         fprintf(stderr, "[hm64_pc] sramWrite: seek to offset 0x%X failed\n", offset);
     } else if (fwrite(src, 1, size, f) != size) {
         fprintf(stderr, "[hm64_pc] sramWrite: short write at offset 0x%X\n", offset);
+    } else if (fflush(f) != 0) {
+        fprintf(stderr, "[hm64_pc] sramWrite: flush failed at offset 0x%X\n", offset);
     }
     fclose(f);
 }
