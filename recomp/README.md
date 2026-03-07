@@ -75,6 +75,24 @@ make recomp
 
 The resulting binary is at `recomp/build/hm64_pc`.
 
+### Using CMake presets (alternative to `make recomp-build`)
+
+A `CMakePresets.json` is provided in this directory for developers who prefer
+working directly with CMake.
+
+```sh
+# Release build (default for testers)
+cmake --preset release -S recomp
+cmake --build --preset release
+
+# Debug build (with symbols, for developers)
+cmake --preset debug -S recomp
+cmake --build --preset debug
+```
+
+Binaries land in `recomp/build/hm64_pc` (release) or
+`recomp/build-debug/hm64_pc` (debug).
+
 ## Running
 
 ```sh
