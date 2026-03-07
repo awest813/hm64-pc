@@ -64,6 +64,7 @@ add_executable(hm64_pc
     patches/nusys_patches.cpp
     patches/rdp_patches.cpp
     patches/rsp_audio_patches.cpp
+    patches/sram_patches.cpp
     patches/title_patches.cpp
 
     # Recompiled game code

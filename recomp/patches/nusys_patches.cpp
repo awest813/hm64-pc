@@ -127,15 +127,32 @@ RECOMP_PATCH void nuGfxDisplayOff(uint8_t* rdram, recomp_context* ctx) {
 }
 
 // ---------------------------------------------------------------------------
-// nuContInit / nuContDataGetAll – controller handling
+// nuContInit / nuContDataGetAll / nuContDataGetExAll – controller handling
 // ---------------------------------------------------------------------------
 RECOMP_PATCH void nuContInit(uint8_t* rdram, recomp_context* ctx) {
-    // ultramodern provides controller data; nothing to initialise here.
+    // Return 0x01 to report that controller port 1 is connected.
+    // The game's setupGameStart() checks (contPattern & 1): if true it
+    // launches the intro cutscene / title screen; if false it shows the
+    // "No Controller" message instead.  On PC, keyboard and gamepad are
+    // always mapped to port 1, so we unconditionally report it present.
+    ctx->r2 = 0x01;
 }
 
 RECOMP_PATCH void nuContDataGetAll(uint8_t* rdram, recomp_context* ctx) {
     // Called each frame to refresh the nuContData[] array.
     // ultramodern populates this through the input callback.
+    ultramodern::update_input(rdram);
+}
+
+// ---------------------------------------------------------------------------
+// nuContDataGetExAll – extended controller data refresh (all ports)
+// ---------------------------------------------------------------------------
+// Like nuContDataGetAll but also refreshes nuContStatus[] (type/errno).
+// readControllerData() calls this every frame; without a patch the recompiled
+// NuSystem code tries to access real SI hardware and hangs.
+// ultramodern::update_input already fills in button/stick data for all ports;
+// nuContStatus[] stays BSS-zero-initialised (errno=0) so the data is used.
+RECOMP_PATCH void nuContDataGetExAll(uint8_t* rdram, recomp_context* ctx) {
     ultramodern::update_input(rdram);
 }
 
@@ -146,4 +163,96 @@ RECOMP_PATCH void nuContDataGetAll(uint8_t* rdram, recomp_context* ctx) {
 // all controller state the same way; ultramodern handles the indexing.
 RECOMP_PATCH void nuContDataGet(uint8_t* rdram, recomp_context* ctx) {
     ultramodern::update_input(rdram);
+}
+
+// ---------------------------------------------------------------------------
+// nuContPak* – Controller Pak (memory card) API stubs
+// ---------------------------------------------------------------------------
+// HM64 saves via SRAM (handled by sram_patches.cpp), not the Controller Pak.
+// These functions are provided as safe no-ops so that any code path that
+// probes for a pak returns "no pak present" without crashing.
+//
+// nuContPakOpen sets pak.error = NU_CONT_PAK_ERR_EMPTY (1) to signal that
+// no pak is inserted; the caller checks this and skips pak operations.
+
+// NUContPak is a NuSystem struct; we only need to set its error field which
+// is at a known offset (offsetof(NUContPak, error) == 0 in nuContPak.h).
+// Rather than pulling in NuSystem headers, we write the errno byte directly
+// via the rdram pointer using the N64 virtual address in a0.
+// Layout from nuContPak.h:  NUContPak { NUContPakHandle pak; ... }
+// pak.error is the first field after the OSPfs handle; for our purposes we
+// just set the whole struct's first word to a non-zero error code so callers
+// see "pak absent" and short-circuit without further pak operations.
+
+// Offset of the error field within NUContPak.pak (OSPfs).
+// OSPfs layout: [OSPiHandle* handle (4 bytes)] [u32 channel (4 bytes)] [u8 error (1 byte)]
+// pak.error lives at byte offset 8 from the NUContPak base.
+static constexpr uint32_t CONT_PAK_ERROR_OFFSET = 8;
+
+RECOMP_PATCH void nuContPakOpen(uint8_t* rdram, recomp_context* ctx) {
+    // a0 = NUContPak* (N64 virtual address), a1 = controller index
+    // Write error = 1 (NU_CONT_PAK_ERR_EMPTY) so callers see no pak present.
+    // NUContPak.pak is an OSPfs which begins with OSFileHandle (OSPiHandle*,
+    // 4-byte pointer) then a 4-byte "channel" word, then at offset 8 the
+    // error byte.  We set offset 8 = 1.
+    uint32_t pak_vaddr = (uint32_t)ctx->r4;
+    if (pak_vaddr) {
+        uint32_t phys = pak_vaddr & 0x1FFFFFFF;
+        rdram[phys + CONT_PAK_ERROR_OFFSET] = 1; // pak.error = 1 (NU_CONT_PAK_ERR_EMPTY)
+    }
+}
+
+RECOMP_PATCH void nuContPakRepairId(uint8_t* rdram, recomp_context* ctx) {
+    // No pak; nothing to repair.
+}
+
+RECOMP_PATCH void nuContPakGetFree(uint8_t* rdram, recomp_context* ctx) {
+    ctx->r2 = 0; // 0 free pages
+}
+
+RECOMP_PATCH void nuContPakFileNum(uint8_t* rdram, recomp_context* ctx) {
+    // a0 = NUContPak*, a1 = *max_files (s32*), a2 = *used_files (s32*)
+    // Write 32-bit zero to both output pointers (4 bytes each, BE or zero = same).
+    uint32_t max_ptr  = (uint32_t)ctx->r5;
+    uint32_t used_ptr = (uint32_t)ctx->r6;
+    if (max_ptr) {
+        uint32_t phys = max_ptr & 0x1FFFFFFF;
+        rdram[phys+0] = rdram[phys+1] = rdram[phys+2] = rdram[phys+3] = 0;
+    }
+    if (used_ptr) {
+        uint32_t phys = used_ptr & 0x1FFFFFFF;
+        rdram[phys+0] = rdram[phys+1] = rdram[phys+2] = rdram[phys+3] = 0;
+    }
+}
+
+RECOMP_PATCH void nuContPakCodeSet(uint8_t* rdram, recomp_context* ctx) {
+    // No-op; no pak to set a company/game code on.
+}
+
+RECOMP_PATCH void nuContPakFileOpenJis(uint8_t* rdram, recomp_context* ctx) {
+    // a0 = NUContPak* – mark pak error so callers skip the operation.
+    uint32_t pak_vaddr = (uint32_t)ctx->r4;
+    if (pak_vaddr) {
+        rdram[(pak_vaddr & 0x1FFFFFFF) + CONT_PAK_ERROR_OFFSET] = 1;
+    }
+}
+
+RECOMP_PATCH void nuContPakFileReadWrite(uint8_t* rdram, recomp_context* ctx) {
+    // No pak; no data to read or write.
+}
+
+RECOMP_PATCH void nuContPakFileDeleteJis(uint8_t* rdram, recomp_context* ctx) {
+    // No pak; nothing to delete.
+}
+
+// ---------------------------------------------------------------------------
+// osEPiLinkHandle – register an OSPiHandle with the OS PI subsystem
+// ---------------------------------------------------------------------------
+// Called from sramInit() before any DMA.  On PC, osEPiStartDma is already
+// a no-op stub, so the actual transfer never happens.  The handle setup in
+// sramInit is skipped entirely when sramLoad/sramWrite are patched directly
+// (see sram_patches.cpp), but we provide this stub as a safety net for any
+// remaining call site.
+RECOMP_PATCH void osEPiLinkHandle(uint8_t* rdram, recomp_context* ctx) {
+    // No PI hardware on PC; no-op.
 }

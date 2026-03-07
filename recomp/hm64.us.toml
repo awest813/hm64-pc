@@ -101,6 +101,9 @@ name = "osPiGetCmdQueue"
 name = "osEPiStartDma"
 
 [[patches.stub]]
+name = "osEPiLinkHandle"
+
+[[patches.stub]]
 name = "osAiSetFrequency"
 
 [[patches.stub]]
@@ -172,6 +175,34 @@ name = "nuContDataGetAll"
 
 [[patches.stub]]
 name = "nuContDataGet"
+
+[[patches.stub]]
+name = "nuContDataGetExAll"
+
+# Controller Pak (memory card) functions – not used on PC; safe no-ops.
+[[patches.stub]]
+name = "nuContPakOpen"
+
+[[patches.stub]]
+name = "nuContPakRepairId"
+
+[[patches.stub]]
+name = "nuContPakGetFree"
+
+[[patches.stub]]
+name = "nuContPakFileNum"
+
+[[patches.stub]]
+name = "nuContPakCodeSet"
+
+[[patches.stub]]
+name = "nuContPakFileOpenJis"
+
+[[patches.stub]]
+name = "nuContPakFileReadWrite"
+
+[[patches.stub]]
+name = "nuContPakFileDeleteJis"
 
 # ---------------------------------------------------------------------------
 # Audio (libmus) stubs
