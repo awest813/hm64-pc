@@ -11,6 +11,7 @@
 
 #include <cstdio>
 #include <cstdlib>
+#include <filesystem>
 #include <string>
 
 // N64ModernRuntime headers
@@ -75,8 +76,24 @@ int main(int argc, char* argv[]) {
     }
 
     printf("[hm64_pc] ROM: %s\n", rom_path.c_str());
-    printf("[hm64_pc] Save file: hm64.sav (current working directory)\n");
-    printf("[hm64_pc] Hotkeys: F11 fullscreen, Esc quit\n");
+
+    // Print the absolute save-file path so the user knows where to find it,
+    // regardless of the working directory they launched from.
+    {
+        std::error_code ec;
+        auto save_abs = std::filesystem::absolute("hm64.sav", ec);
+        if (!ec) {
+            printf("[hm64_pc] Save file: %s\n", save_abs.string().c_str());
+        } else {
+            printf("[hm64_pc] Save file: hm64.sav (current directory)\n");
+        }
+    }
+
+    printf("[hm64_pc] --- Controls (keyboard defaults) ---\n");
+    printf("[hm64_pc]   Enter=Start  Z key=Z  X=B  C=A  Shift=R  Q=L\n");
+    printf("[hm64_pc]   Arrow keys=D-pad  WASD=Analog  IJKL=C-buttons\n");
+    printf("[hm64_pc]   F11=fullscreen  Esc=quit\n");
+    printf("[hm64_pc] -----------------------------------------\n");
 
     // Register platform callbacks with ultramodern
     ultramodern::renderer::set_callbacks(make_renderer_callbacks());
