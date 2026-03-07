@@ -34,21 +34,33 @@ change?* If yes, it needs to be optional or reconsidered.
 
 ## Getting Started
 
-1. Fork the repo and clone it with submodules:
+1. Fork the repo and clone it:
    ```sh
-   git clone --recursive https://github.com/awest813/hm64-pc.git
+   git clone https://github.com/awest813/hm64-pc.git
+   cd hm64-pc
    ```
 
-2. Follow the build instructions in [README.md](README.md).
+2. Bootstrap local tools/dependencies:
+   ```sh
+   tools/setup.sh --install-system-deps
+   make recomp-deps
+   ```
 
-3. Create a branch for your work:
+3. Place your legally obtained `baserom.us.z64` in repo root and run preflight:
+   ```sh
+   make doctor
+   ```
+
+4. Follow the build/test flow in [README.md](README.md) and [TESTING.md](TESTING.md).
+
+5. Create a branch for your work:
    ```sh
    git checkout -b my-feature-or-fix
    ```
 
-4. Make your changes and test them.
+6. Make your changes and test them.
 
-5. Open a pull request against `main` (or the appropriate feature branch).
+7. Open a pull request against `main` (or the appropriate feature branch).
 
 ---
 
@@ -59,6 +71,7 @@ change?* If yes, it needs to be optional or reconsidered.
 - Build the project and report anything that breaks
 - Test gameplay past the title screen
 - Report crashes, visual glitches, audio issues, or wrong behavior
+- Follow and extend the smoke checklist in [TESTING.md](TESTING.md)
 - Use the [bug report template](.github/ISSUE_TEMPLATE/bug_report.md)
 
 ### Decomp quality
@@ -112,6 +125,7 @@ Please use the GitHub issue templates:
 - **Feature request** — new ideas or improvements
 
 Include your platform, build steps, and steps to reproduce the issue.
+Check [KNOWN_ISSUES.md](KNOWN_ISSUES.md) first to avoid duplicate reports.
 
 ---
 
