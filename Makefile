@@ -12,6 +12,8 @@ PERMUTER ?= 0
 
 MODERN_GCC ?= 0
 
+.DEFAULT_GOAL := all
+
 # Directories
 
 SRC_DIRS := src
@@ -40,6 +42,9 @@ LD := $(CROSS)ld
 OBJCOPY := $(CROSS)objcopy
 CPP := gcc -E -P -x c
 MKLDSCRIPT := $(TOOLS_DIR)/build/mkldscript
+SETUP_SCRIPT := $(TOOLS_DIR)/setup.sh
+DOCTOR_SCRIPT := $(TOOLS_DIR)/doctor.sh
+RECOMP_DEPS_SCRIPT := $(TOOLS_DIR)/bootstrap_recomp_deps.sh
 
 ifeq ($(MODERN_GCC),1)
   CC := $(CROSS)gcc
@@ -433,7 +438,47 @@ ifeq ($(MODERN_GCC),1)
   $(info Compiler: $(CC))
 endif
 
-all: check
+help:
+	@echo "HM64 build targets"
+	@echo "  make doctor          - validate toolchain, deps, ROM, and runtime prerequisites"
+	@echo "  make setup           - extract split assets from ROM into assets/"
+	@echo "  make                 - build and diff-match hm64.z64 against baserom"
+	@echo "  make recomp-deps     - fetch n64recomp + N64ModernRuntime dependencies"
+	@echo "  make recomp          - full PC port pipeline (ROM -> ELF -> recomp -> hm64_pc)"
+	@echo "  make recomp-build    - build PC binary from generated recomp/output/funcs/"
+	@echo "  make pc              - recommended first-time PC build flow"
+	@echo "  make clean           - clean build outputs"
+
+doctor:
+	@bash "$(DOCTOR_SCRIPT)"
+
+pc: doctor setup recomp
+	@echo "[pc] Success. Run ./recomp/build/hm64_pc"
+
+# Lightweight decomp preflight before invoking the MIPS compiler.
+preflight-decomp:
+	@if [ "$(MODERN_GCC)" != "1" ] && [ ! -x "$(KMC_PATH)gcc" ]; then \
+		echo "[setup] Missing $(KMC_PATH)gcc"; \
+		echo "[setup] Run tools/setup.sh (or tools/setup.sh --install-system-deps on Ubuntu/WSL)."; \
+		exit 1; \
+	fi
+	@if [ ! -x "$(MKLDSCRIPT)" ]; then \
+		echo "[setup] Missing $(MKLDSCRIPT)"; \
+		echo "[setup] Building mkldscript helper..."; \
+		$(MAKE) $(MKLDSCRIPT); \
+	fi
+	@if ! $(PYTHON) -c "import splat" >/dev/null 2>&1; then \
+		echo "[setup] Missing Python module: splat"; \
+		echo "[setup] Run tools/setup.sh to install Python requirements."; \
+		exit 1; \
+	fi
+	@if [ ! -f "$(BASEROM)" ]; then \
+		echo "[setup] Missing ROM: $(BASEROM)"; \
+		echo "[setup] Place your legally obtained $(BASEROM) in repo root."; \
+		exit 1; \
+	fi
+
+all: preflight-decomp check
 
 jp-%:
 	$(MAKE) -f Makefile.jp $*
@@ -1027,12 +1072,20 @@ $(SPEC_PROCESSED): $(SPEC)
 	$(MKDIR)
 	$(V)$(CPP) $(SPEC_CPP_FLAGS) $< > $@
 
+$(MKLDSCRIPT): $(TOOLS_DIR)/build/mkldscript.c $(TOOLS_DIR)/build/spec.c $(TOOLS_DIR)/build/util.c
+	@echo "[setup] Building mkldscript helper..."
+	$(V)gcc -o $(MKLDSCRIPT) \
+		$(TOOLS_DIR)/build/mkldscript.c \
+		$(TOOLS_DIR)/build/spec.c \
+		$(TOOLS_DIR)/build/util.c
+	$(V)chmod +x $(MKLDSCRIPT)
+
 $(LD_SCRIPT): $(SPEC_PROCESSED) $(MKLDSCRIPT)
 	$(V)$(MKLDSCRIPT) $< $@
 
 # Final binary
 
-$(BASENAME).elf: $(OBJECTS) $(LD_SCRIPT)
+$(BASENAME).elf: preflight-decomp $(OBJECTS) $(LD_SCRIPT)
 	$(V)$(LD) $(LDFLAGS) -o $@
 
 $(TARGET): $(BASENAME).elf
@@ -1043,7 +1096,7 @@ check: $(TARGET)
 	$(V)diff $(TARGET) $(BASEROM) && echo "OK"
 
 
-.PHONY: all modern clean clean-assets setup split rerun check codesegment
+.PHONY: all help doctor pc preflight-decomp modern clean clean-assets setup split rerun check codesegment
 .PHONY: extract-sprites extract-animation-metadata extract-animation-scripts
 .PHONY: extract-animation-sprites extract-animations extract-gifs
 .PHONY: extract-texts extract-map-sprites extract-cutscenes
@@ -1072,11 +1125,9 @@ N64RECOMP_TOOL     := tools/n64recomp/build/N64Recomp
 RECOMP_TOML        := recomp/hm64.us.toml
 RECOMP_OUTPUT_DIR  := recomp/output
 RECOMP_BUILD_DIR   := recomp/build
-RECOMP_SUBMODULE   := tools/n64recomp/CMakeLists.txt
-RUNTIME_SUBMODULE  := recomp/lib/N64ModernRuntime/CMakeLists.txt
 
 # Build the N64Recomp tool itself from source
-$(N64RECOMP_TOOL): $(RECOMP_SUBMODULE)
+$(N64RECOMP_TOOL): recomp-deps
 	@echo "[recomp] Building N64Recomp tool..."
 	@mkdir -p tools/n64recomp/build
 	cmake -S tools/n64recomp -B tools/n64recomp/build -DCMAKE_BUILD_TYPE=Release
@@ -1092,7 +1143,7 @@ recomp-generate: $(BASENAME).elf $(N64RECOMP_TOOL)
 
 # Build the PC port with CMake.
 # Requires: recomp-generate to have been run first.
-recomp-build: $(RUNTIME_SUBMODULE)
+recomp-build: recomp-deps
 	@echo "[recomp] Building PC port..."
 	@mkdir -p $(RECOMP_BUILD_DIR)
 	cmake -S recomp -B $(RECOMP_BUILD_DIR) -DCMAKE_BUILD_TYPE=Release
@@ -1102,16 +1153,10 @@ recomp-build: $(RUNTIME_SUBMODULE)
 # Convenience target: run the full recomp pipeline (ELF → generate → build)
 recomp: $(BASENAME).z64 recomp-generate recomp-build
 
-# Initialise git submodules if they haven't been fetched yet.
-$(RECOMP_SUBMODULE):
-	@echo "[recomp] Initialising n64recomp submodule..."
-	git submodule update --init --recursive -- tools/n64recomp
-
-$(RUNTIME_SUBMODULE):
-	@echo "[recomp] Initialising N64ModernRuntime submodule..."
-	git submodule update --init --recursive -- recomp/lib/N64ModernRuntime
+recomp-deps:
+	@bash "$(RECOMP_DEPS_SCRIPT)"
 
 clean-recomp:
 	rm -rf $(RECOMP_OUTPUT_DIR) $(RECOMP_BUILD_DIR) tools/n64recomp/build
 
-.PHONY: recomp recomp-generate recomp-build clean-recomp
+.PHONY: recomp recomp-generate recomp-build recomp-deps clean-recomp

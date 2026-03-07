@@ -58,3 +58,7 @@ recomp/output/
 recomp/build/
 tools/n64recomp/build/
 /tools/build/mkldscript
+
+# Local fallback clones used when submodule gitlinks are unavailable
+tools/n64recomp/
+recomp/lib/N64ModernRuntime/

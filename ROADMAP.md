@@ -1,142 +1,117 @@
-# HM64 PC Port – Roadmap
+# HM64 PC Fork — Roadmap
 
-This roadmap reflects the actual current state of the project and its next
-priorities. Status marks are honest — nothing is listed as done unless it is
-done in the codebase.
+This roadmap reflects the current state of this fork and near-term priorities.
+Statuses are evidence-based and intentionally conservative.
 
-**Status key:**
-- ✅ Done
-- 🔧 In progress / partially working
-- 📋 Planned
-- 💡 Optional / stretch goal
+## Status key
 
----
-
-## 1. Core Playability
-
-Goals: get the game running stably from boot through the first playable session.
-
-| Item                                           | Status |
-|------------------------------------------------|--------|
-| US version 100% decompiled                     | ✅     |
-| Static MIPS→C recompilation (n64recomp)        | ✅     |
-| PC executable boots to title screen            | ✅     |
-| Title screen renders correctly                 | ✅     |
-| "Press Start / How to Play" menu flow          | ✅     |
-| Controller input received at title screen      | ✅     |
-| Save file write / read (`hm64.sav`)            | ✅     |
-| Game boots past title into gameplay            | 🔧     |
-| File select screen stability                   | 🔧     |
-| In-game map rendering                          | 🔧     |
-| NPC / character rendering                      | 🔧     |
-| Gameplay loop (farming, time, seasons)         | 🔧     |
-| Cutscene playback                              | 🔧     |
-| Dialogue system stability                      | 🔧     |
-| Audio/music playback in-game                   | 🔧     |
-| Save/load during gameplay                      | 🔧     |
-| Progression correctness (day/season/year)      | 📋     |
-| Crash-free first full in-game day              | 📋     |
-| End-of-year / credits sequence                 | 📋     |
+- ✅ **Done**
+- 🔧 **In Progress**
+- 📋 **Planned**
+- 💡 **Optional / Stretch**
 
 ---
 
-## 2. PC Quality-of-Life
+## 1) Core Playability
 
-Goals: make the game comfortable to play on PC without changing its character.
+Goal: stable and faithful core gameplay from boot through normal progression.
 
-| Item                                           | Status |
-|------------------------------------------------|--------|
-| Keyboard input (default mapping)               | ✅     |
-| Gamepad input (first detected device)          | ✅     |
-| Analog stick dead zone (drift prevention)      | ✅     |
-| Fullscreen toggle (F11)                        | ✅     |
-| ROM path as CLI argument                       | ✅     |
-| Save file auto-created on first save           | ✅     |
-| Windowed mode                                  | ✅     |
-| Configurable keyboard bindings                 | 📋     |
-| Configurable gamepad bindings                  | 📋     |
-| Multiple gamepad support                       | 📋     |
-| Resolution / aspect ratio options              | 📋     |
-| Config file (JSON/TOML) for user settings      | 📋     |
-| Per-user save directory (XDG / AppData)        | 📋     |
-| In-game pause / quit shortcut                  | 📋     |
-| Faster text scroll option (optional)           | 💡     |
-| Auto-save warning on window close              | 💡     |
+| Item | Status |
+|---|---|
+| US decompilation baseline integrated | ✅ |
+| n64recomp pipeline integrated | ✅ |
+| Native PC boot path established | ✅ |
+| Title/menu rendering and input path | ✅ |
+| SRAM-backed save file path (`hm64.sav`) | ✅ |
+| Boot-to-gameplay stability validation | 🔧 |
+| In-game rendering correctness | 🔧 |
+| In-game audio reliability | 🔧 |
+| Save/load correctness during long play sessions | 🔧 |
+| Progression correctness (day/season/year) | 📋 |
+| End-to-end year/credits validation | 📋 |
 
 ---
 
-## 3. Faithful Enhancements
+## 2) PC Quality-of-Life
 
-Goals: improvements that feel at home in the original game and do not change
-its pacing, progression, or tone.
+Goal: practical PC usability without changing HM64’s identity.
 
-| Item                                           | Status |
-|------------------------------------------------|--------|
-| Original game bug fixes (graphics rotation)   | ✅     |
-| Native save system (no memory card friction)   | ✅     |
-| Original aspect ratio preserved by default     | ✅     |
-| Fix original graphical glitches where safe     | 📋     |
-| Optional HUD improvements (legibility)         | 💡     |
-| Optional higher-resolution font rendering      | 💡     |
-| Optional framerate smoothing (non-invasive)    | 💡     |
-
-The bar for this section is high: any enhancement must feel invisible to a
-player who doesn't know it's there.
-
----
-
-## 4. User Testing and Releases
-
-Goals: make it easy for testers to find, report, and reproduce issues.
-
-| Item                                           | Status |
-|------------------------------------------------|--------|
-| README with clear build instructions           | ✅     |
-| Troubleshooting guide                          | ✅     |
-| Controls documentation                         | ✅     |
-| Save file documentation                        | ✅     |
-| ROADMAP.md                                     | ✅     |
-| CONTRIBUTING.md                                | ✅     |
-| GitHub issue templates (bug report, feature)   | ✅     |
-| First test build (title screen milestone)      | 🔧     |
-| Gameplay regression test checklist             | 📋     |
-| Known issues list (maintained in-repo)         | 📋     |
-| GitHub Releases with pre-built binaries        | 📋     |
-| Changelog                                      | 📋     |
-| Platform validation (Linux, Windows/WSL2)      | 📋     |
+| Item | Status |
+|---|---|
+| Keyboard default mapping | ✅ |
+| Gamepad default mapping | ✅ |
+| Gamepad hot-plug handling | ✅ |
+| C-button equivalents on gamepad | ✅ |
+| Fullscreen hotkey (`F11`) | ✅ |
+| ROM CLI argument support | ✅ |
+| Clear startup runtime info (ROM/save/hotkeys) | ✅ |
+| User-configurable keybinds | 📋 |
+| User-configurable gamepad mapping | 📋 |
+| Per-user save directory (XDG/AppData) | 📋 |
+| Runtime settings/config file | 📋 |
+| Resolution/aspect options UI | 📋 |
+| Accessibility-focused optional QoL toggles | 💡 |
 
 ---
 
-## 5. Developer Experience
+## 3) Faithful Enhancements
 
-Goals: make it easy for contributors to get started and stay productive.
+Goal: improvements that preserve original pacing, tone, and progression.
 
-| Item                                           | Status |
-|------------------------------------------------|--------|
-| Single `make recomp` command for full build    | ✅     |
-| N64Recomp tool build automated via Makefile    | ✅     |
-| CMake build for PC port                        | ✅     |
-| `recomp/README.md` with port internals         | ✅     |
-| Git submodule setup documented                 | ✅     |
-| CMakePresets.json (debug + release)            | ✅     |
-| Decomp.me preset for HM64                      | ✅     |
-| Verbose build mode (`VERBOSE=1`)               | ✅     |
-| Debug binary build documented                  | ✅     |
-| Better warning/error messages (missing files)  | ✅     |
-| Cleaner patch file organization                | 📋     |
-| Developer build guide (separate doc)           | 📋     |
-| RDP/RSP patch test harness                     | 📋     |
+| Item | Status |
+|---|---|
+| Native save persistence replacing hardware SRAM dependency | ✅ |
+| Faithfulness-first contribution philosophy documented | ✅ |
+| Non-invasive bug fixes that preserve original feel | 🔧 |
+| Optional readability/UI polish that fits original style | 💡 |
+| Optional convenience toggles guarded behind defaults | 💡 |
 
 ---
 
-## Milestone Summary
+## 4) User Testing and Releases
 
-| Milestone                       | Target state                                    |
-|---------------------------------|-------------------------------------------------|
-| **M1 – Title Screen** (current) | Game boots, title renders, input works, saves   |
-| **M2 – First Day**              | Start new game → play a full first in-game day  |
-| **M3 – Stable Season**          | Play through Spring Year 1 without crashes      |
-| **M4 – Full Year**              | Reach end of Year 1, credits roll               |
-| **M5 – Polish**                 | QoL settings, bindings, resolution, releases    |
+Goal: make testing easy, reproducible, and high-signal.
 
-We are currently working toward **M2**.
+| Item | Status |
+|---|---|
+| Tester-friendly README quick start | ✅ |
+| Build preflight command (`make doctor`) | ✅ |
+| Setup/bootstrap helper (`tools/setup.sh`) | ✅ |
+| Runtime dependency bootstrap (`make recomp-deps`) | ✅ |
+| Public testing guide (`TESTING.md`) | ✅ |
+| Known issues tracking file (`KNOWN_ISSUES.md`) | ✅ |
+| Issue templates (bug + feature) | ✅ |
+| Structured gameplay regression checklist expansion | 🔧 |
+| Tagged test-build release cadence | 📋 |
+| Changelog process | 📋 |
+| Multi-platform validation matrix | 📋 |
+
+---
+
+## 5) Developer Experience
+
+Goal: reduce contributor setup friction and improve maintainability.
+
+| Item | Status |
+|---|---|
+| `make help` onboarding target | ✅ |
+| Actionable preflight diagnostics | ✅ |
+| Idempotent local setup script | ✅ |
+| Recomp dependency fallback when submodule gitlinks are absent | ✅ |
+| Documented debug build flow | ✅ |
+| Patch/runtime internals documentation | ✅ |
+| CI workflow for automated validation | 📋 |
+| Runtime patch test harnesses | 📋 |
+| Additional architecture docs for major subsystems | 📋 |
+
+---
+
+## Milestones
+
+| Milestone | Target |
+|---|---|
+| **M1 — Public Test Bootstrap** (current) | Clone → setup → doctor → build → run path is clear and reproducible |
+| **M2 — First Stable Gameplay Session** | Reach and complete a full first in-game day with no blocker bugs |
+| **M3 — Stable Season** | Play through a full season with reliable saves/audio/input |
+| **M4 — Full-Year Validation** | End-of-year progression and credits validated |
+| **M5 — Polish + Tester Releases** | Optional QoL, release packaging, broader platform confidence |

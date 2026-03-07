@@ -44,7 +44,8 @@ Any other context, logs, or screenshots that might help diagnose the issue.
 
 ## Checklist
 
-- [ ] I have run `git submodule update --init --recursive`
+- [ ] I have run `make recomp-deps`
+- [ ] I have run `make doctor`
 - [ ] I have run `make recomp-generate` before `make recomp-build`
 - [ ] My ROM is `baserom.us.z64` (big-endian/Z64 format)
 - [ ] I have checked the [Troubleshooting section](../../README.md#troubleshooting) of the README

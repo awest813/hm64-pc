@@ -74,6 +74,10 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 
+    printf("[hm64_pc] ROM: %s\n", rom_path.c_str());
+    printf("[hm64_pc] Save file: hm64.sav (current working directory)\n");
+    printf("[hm64_pc] Hotkeys: F11 fullscreen, Esc quit\n");
+
     // Register platform callbacks with ultramodern
     ultramodern::renderer::set_callbacks(make_renderer_callbacks());
     ultramodern::audio::set_callbacks(make_audio_callbacks());
