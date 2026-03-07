@@ -68,6 +68,8 @@ int main(int argc, char* argv[]) {
     // Initialise the recomp layer with the ROM
     if (!recomp::init(rom_path.c_str())) {
         fprintf(stderr, "[hm64_pc] Failed to open ROM: %s\n", rom_path.c_str());
+        fprintf(stderr, "  The ROM must be the US version: baserom.us.z64\n");
+        fprintf(stderr, "  Place it in the current directory or pass its path as an argument.\n");
         fprintf(stderr, "Usage: %s [path/to/baserom.us.z64]\n", argv[0]);
         return EXIT_FAILURE;
     }

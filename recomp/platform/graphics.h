@@ -21,6 +21,10 @@ void init();
 // Called once after ultramodern::start() returns
 void deinit();
 
+// Toggle between windowed and fullscreen (desktop fullscreen).
+// Safe to call from any thread that owns the event loop (i.e. render thread).
+void toggle_fullscreen();
+
 // ultramodern renderer callbacks
 void* create_renderer(void* window_handle);
 void  destroy_renderer(void* renderer);
