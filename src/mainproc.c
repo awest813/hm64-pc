@@ -24,7 +24,6 @@
 volatile u16 engineStateFlags;
 volatile u8 drawnFrameCount;
 volatile u8 previousLoopStepsPerCycle;
-volatile u8 drawnFrameCount;
 volatile u8 retraceCount;
 volatile u8 loopStepsPerCycle;
 volatile u8 framebufferCount;
@@ -46,8 +45,6 @@ volatile u8 gfxTaskNo;
 volatile u8 frameCount;
 
 volatile u32 D_801C3B68[4];
-volatile u8 loopStepsPerCycle;
-volatile u8 framebufferCount;
 volatile u8 currentFramebufferIndex;
 
 volatile u8 D_80237408;

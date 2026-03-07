@@ -29,6 +29,7 @@ natively on PC using [N64: Recompiled](https://github.com/N64Recomp/N64Recomp)
 | `patches/nusys_patches.cpp`  | PC replacements for NuSystem API stubs           |
 | `patches/rdp_patches.cpp`    | RDP-related patches (currently empty)            |
 | `patches/rsp_audio_patches.cpp` | RSP audio patches (currently empty)           |
+| `patches/sram_patches.cpp`   | PC-native SRAM save file (file I/O backend)      |
 | `patches/title_patches.cpp`  | Title/menu screen – primary test target          |
 | `lib/N64ModernRuntime/`      | Runtime library (git submodule)                  |
 | `output/`                    | Generated C files from n64recomp (build artifact)|
@@ -134,17 +135,35 @@ interacts with the linker.
 
 See `patches/title_patches.cpp` for an example (`mainproc` replacement).
 
+## Save Files
+
+Game progress is saved in `hm64.sav` (placed next to the binary, or in the
+current working directory).  It mirrors the 32 KB cartridge SRAM layout:
+
+| Offset range     | Contents                           |
+|------------------|------------------------------------|
+| 0x0000 – 0x0FFF  | Save slot 1 (4 KB)                 |
+| 0x1000 – 0x1FFF  | Save slot 2 (4 KB)                 |
+| 0x2000 – 0x2FFF  | Save slot 3 (4 KB)                 |
+| 0x3000 – 0x3FFF  | Save slot 4 (4 KB)                 |
+| 0x4000 – 0x7FFF  | Farm-ranking data (16 KB)          |
+
+The file is created automatically on first save.  Delete `hm64.sav` to reset
+all saved data to a blank state (equivalent to removing the cartridge battery).
+
 ## Troubleshooting
 
-| Symptom                        | Likely cause / fix                                         |
-|--------------------------------|------------------------------------------------------------|
-| Black screen, game thread hung | `nuGfxFuncSet` not storing callback; check nusys_patches   |
-| Black screen, no crash         | RDP tasks not submitted; check nusys_patches               |
-| Crash in DMA path              | ROM DMA issue; add a patch in librecomp config             |
-| No audio                       | SDL2 audio device init failed; check audio.cpp             |
-| Controller not responding      | Check input.cpp; verify SDL2 gamepad mapping               |
-| Analog stick drifts            | Dead zone too small; adjust GAMEPAD_DEAD_ZONE in input.cpp |
-| Build fails: missing submodule | Run `git submodule update --init --recursive`              |
-| Build fails: missing funcs dir | Run `make recomp-generate` first                           |
-| Window too small               | Press F11 to toggle fullscreen                             |
-| ROM not found on launch        | Pass ROM path as argument: `./hm64_pc path/to/baserom.us.z64` |
+| Symptom                              | Likely cause / fix                                           |
+|--------------------------------------|--------------------------------------------------------------|
+| Black screen, game thread hung       | `nuGfxFuncSet` not storing callback; check nusys_patches     |
+| Black screen, no crash               | RDP tasks not submitted; check nusys_patches                 |
+| Shows "No Controller" at startup     | `nuContInit` not returning 1; check nusys_patches            |
+| Crash in DMA path                    | ROM DMA issue; add a patch in librecomp config               |
+| No audio                             | SDL2 audio device init failed; check audio.cpp               |
+| Controller not responding            | Check input.cpp; verify SDL2 gamepad mapping                 |
+| Analog stick drifts                  | Dead zone too small; adjust GAMEPAD_DEAD_ZONE in input.cpp   |
+| Save/load does nothing               | Check sram_patches.cpp; verify hm64.sav is writable          |
+| Build fails: missing submodule       | Run `git submodule update --init --recursive`                |
+| Build fails: missing funcs dir       | Run `make recomp-generate` first                             |
+| Window too small                     | Press F11 to toggle fullscreen                               |
+| ROM not found on launch              | Pass ROM path as argument: `./hm64_pc path/to/baserom.us.z64`|
