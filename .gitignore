@@ -51,4 +51,9 @@ undefined_funcs_auto.txt
 !/lib/ucode/rspboot.s
 !/config/us/common_bss.ld
 !/tools/build
+
+# n64recomp PC port build artefacts
+recomp/output/
+recomp/build/
+tools/n64recomp/build/
 /tools/build/mkldscript

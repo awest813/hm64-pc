@@ -1059,3 +1059,59 @@ TEXTURE_BIN := $(patsubst $(SPRITE_BUILD_DIR)/%Texture.bin.o,$(SPRITE_BUILD_DIR)
 .PRECIOUS: %.bin
 
 MAKEFLAGS += --no-builtin-rules
+
+# ---------------------------------------------------------------------------
+# n64recomp – PC port targets
+# ---------------------------------------------------------------------------
+# Directory layout:
+#   tools/n64recomp/     – N64Recomp tool (git submodule)
+#   recomp/              – PC port source tree
+#   recomp/output/funcs/ – Generated per-function C files (build artifact)
+
+N64RECOMP_TOOL     := tools/n64recomp/build/N64Recomp
+RECOMP_TOML        := recomp/hm64.us.toml
+RECOMP_OUTPUT_DIR  := recomp/output
+RECOMP_BUILD_DIR   := recomp/build
+RECOMP_SUBMODULE   := tools/n64recomp/CMakeLists.txt
+RUNTIME_SUBMODULE  := recomp/lib/N64ModernRuntime/CMakeLists.txt
+
+# Build the N64Recomp tool itself from source
+$(N64RECOMP_TOOL): $(RECOMP_SUBMODULE)
+	@echo "[recomp] Building N64Recomp tool..."
+	@mkdir -p tools/n64recomp/build
+	cmake -S tools/n64recomp -B tools/n64recomp/build -DCMAKE_BUILD_TYPE=Release
+	cmake --build tools/n64recomp/build --parallel
+
+# Run N64Recomp on the compiled ELF to generate per-function C files.
+# Depends on the decomp ELF being up-to-date first.
+recomp-generate: $(BASENAME).elf $(N64RECOMP_TOOL)
+	@echo "[recomp] Running N64Recomp on $(BASENAME).elf..."
+	@mkdir -p $(RECOMP_OUTPUT_DIR)/funcs
+	$(N64RECOMP_TOOL) $(RECOMP_TOML)
+	@echo "[recomp] Generated C files written to $(RECOMP_OUTPUT_DIR)/funcs/"
+
+# Build the PC port with CMake.
+# Requires: recomp-generate to have been run first.
+recomp-build: $(RUNTIME_SUBMODULE)
+	@echo "[recomp] Building PC port..."
+	@mkdir -p $(RECOMP_BUILD_DIR)
+	cmake -S recomp -B $(RECOMP_BUILD_DIR) -DCMAKE_BUILD_TYPE=Release
+	cmake --build $(RECOMP_BUILD_DIR) --parallel
+	@echo "[recomp] PC binary: $(RECOMP_BUILD_DIR)/hm64_pc"
+
+# Convenience target: run the full recomp pipeline (ELF → generate → build)
+recomp: $(BASENAME).z64 recomp-generate recomp-build
+
+# Initialise git submodules if they haven't been fetched yet.
+$(RECOMP_SUBMODULE):
+	@echo "[recomp] Initialising n64recomp submodule..."
+	git submodule update --init --recursive -- tools/n64recomp
+
+$(RUNTIME_SUBMODULE):
+	@echo "[recomp] Initialising N64ModernRuntime submodule..."
+	git submodule update --init --recursive -- recomp/lib/N64ModernRuntime
+
+clean-recomp:
+	rm -rf $(RECOMP_OUTPUT_DIR) $(RECOMP_BUILD_DIR) tools/n64recomp/build
+
+.PHONY: recomp recomp-generate recomp-build clean-recomp
