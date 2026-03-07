@@ -13,8 +13,10 @@
  *   IJKL        → C-Up / C-Left / C-Down / C-Right
  *   F11         → Toggle fullscreen
  *
- * SDL2 gamepad (first detected controller) is also supported using the
- * standard SDL GameController API mapping.
+ * SDL2 gamepad support:
+ *   - First detected controller is opened automatically
+ *   - Hot-plugging is supported (connect/disconnect while running)
+ *   - Right stick and face buttons map to C-buttons for HM64 menu/camera use
  */
 
 #include "input.h"
@@ -60,6 +62,23 @@ static constexpr int8_t KEYBOARD_STICK_MAGNITUDE = 80;
 // at zero.  ~10 % of the SDL full-scale range (32 767).
 static constexpr int16_t GAMEPAD_DEAD_ZONE = 3200;
 
+static void open_first_gamepad() {
+    if (s_gamepad) {
+        return;
+    }
+    for (int i = 0; i < SDL_NumJoysticks(); i++) {
+        if (!SDL_IsGameController(i)) {
+            continue;
+        }
+        s_gamepad = SDL_GameControllerOpen(i);
+        if (s_gamepad) {
+            printf("[hm64::input] Opened gamepad: %s\n",
+                   SDL_GameControllerName(s_gamepad));
+            return;
+        }
+    }
+}
+
 void init() {
     if (SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER | SDL_INIT_EVENTS) != 0) {
         fprintf(stderr, "[hm64::input] SDL_InitSubSystem failed: %s\n"
@@ -67,17 +86,8 @@ void init() {
                 SDL_GetError());
     }
 
-    // Open the first available gamepad (optional)
-    for (int i = 0; i < SDL_NumJoysticks(); i++) {
-        if (SDL_IsGameController(i)) {
-            s_gamepad = SDL_GameControllerOpen(i);
-            if (s_gamepad) {
-                printf("[hm64::input] Opened gamepad: %s\n",
-                       SDL_GameControllerName(s_gamepad));
-                break;
-            }
-        }
-    }
+    // Open the first available gamepad (optional).
+    open_first_gamepad();
 }
 
 void deinit() {
@@ -93,6 +103,28 @@ void poll() {
     while (SDL_PollEvent(&event)) {
         if (event.type == SDL_QUIT) {
             s_quit = true;
+        } else if (event.type == SDL_CONTROLLERDEVICEADDED) {
+            // If no controller is active, grab the first newly-added one.
+            if (!s_gamepad) {
+                s_gamepad = SDL_GameControllerOpen(event.cdevice.which);
+                if (s_gamepad) {
+                    printf("[hm64::input] Gamepad connected: %s\n",
+                           SDL_GameControllerName(s_gamepad));
+                }
+            }
+        } else if (event.type == SDL_CONTROLLERDEVICEREMOVED) {
+            // If the active controller was unplugged, close it and try to
+            // pick another connected pad.
+            if (s_gamepad) {
+                SDL_Joystick* js = SDL_GameControllerGetJoystick(s_gamepad);
+                SDL_JoystickID active_id = SDL_JoystickInstanceID(js);
+                if (active_id == event.cdevice.which) {
+                    SDL_GameControllerClose(s_gamepad);
+                    s_gamepad = nullptr;
+                    printf("[hm64::input] Gamepad disconnected\n");
+                    open_first_gamepad();
+                }
+            }
         } else if (event.type == SDL_KEYDOWN &&
                    event.key.keysym.sym == SDLK_ESCAPE) {
             s_quit = true;
@@ -152,6 +184,12 @@ void poll() {
         if (btn(SDL_CONTROLLER_BUTTON_RIGHTSHOULDER)) buttons |= N64_R_TRIG;
         if (btn(SDL_CONTROLLER_BUTTON_LEFTSHOULDER))  buttons |= N64_L_TRIG;
 
+        // Optional C-button mappings for menu/camera interactions.
+        // Mapped to both right stick and spare face buttons for portability
+        // across controller layouts and player preference.
+        if (btn(SDL_CONTROLLER_BUTTON_Y))             buttons |= N64_C_UP;
+        if (btn(SDL_CONTROLLER_BUTTON_X))             buttons |= N64_C_LEFT;
+
         // Left stick for analog
         auto axis_to_byte = [](int16_t v) -> int8_t {
             // SDL range: -32768 .. 32767 → N64 range: -128 .. 127
@@ -164,6 +202,16 @@ void poll() {
         // Apply dead zone: ignore small deflections to prevent stick drift.
         if (lx > GAMEPAD_DEAD_ZONE || lx < -GAMEPAD_DEAD_ZONE) sx = axis_to_byte(lx);
         if (ly > GAMEPAD_DEAD_ZONE || ly < -GAMEPAD_DEAD_ZONE) sy = axis_to_byte(-ly); // Invert Y
+
+        // Right stick for C buttons (digital threshold).
+        int16_t rx = SDL_GameControllerGetAxis(s_gamepad,
+                                               SDL_CONTROLLER_AXIS_RIGHTX);
+        int16_t ry = SDL_GameControllerGetAxis(s_gamepad,
+                                               SDL_CONTROLLER_AXIS_RIGHTY);
+        if (rx > GAMEPAD_DEAD_ZONE)      buttons |= N64_C_RIGHT;
+        else if (rx < -GAMEPAD_DEAD_ZONE) buttons |= N64_C_LEFT;
+        if (ry > GAMEPAD_DEAD_ZONE)      buttons |= N64_C_DOWN;
+        else if (ry < -GAMEPAD_DEAD_ZONE) buttons |= N64_C_UP;
 
         // Z-trigger (left trigger axis)
         int16_t zt = SDL_GameControllerGetAxis(s_gamepad,
