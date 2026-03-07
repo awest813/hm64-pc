@@ -1,112 +1,269 @@
-# Harvest Moon 64 Decomp
+# Harvest Moon 64 – PC Port
 
-## Progress
+> **A faithful Harvest Moon 64 PC port** built on a complete N64 decompilation,
+> with tasteful quality-of-life improvements that respect the original game's
+> spirit, pacing, and charm.
 
-### North America
+---
 
-The US version is now 100% decompiled! This includes all game functions, data and rodata within the game's main code section, and all library functions, as well as DSL for the cutscenes and dialogue that compiles to the game's custom bytecode systems. All text segments are also automatically extracted and transpiled back to the custom text format during the build process.
+## What is this?
 
-The current build system also supports shiftability. For modding, it's highly recommended to use the `dev` or `dev-qol` branch in this repo as your starting point. The bare minumum to get shiftability working on the `master` branch requires:
-- Removal of `common_bss.ld`. To preserve matching, `config/us/common_bss.ld` is used to match up game variables with their original addresses. For modding, this file should be empty or removed to allow the linker to reallocate memory addresses without conflict.
-- Remove `bssPadding.o` from the `CODE_OBJECTS` list in the Makefile. This file contains an empty array as a hack to match the original BSS size when using hardcoded memory addresses for BSS symbols  
+This is a PC-native port of **Harvest Moon 64** (US version) derived from the
+[HM64 decompilation project](https://github.com/harvestwhisperer/hm64-decomp).
+The entire game has been statically recompiled from MIPS to C using
+[N64Recomp](https://github.com/N64Recomp/N64Recomp), then rebuilt as a native
+PC executable using the [N64ModernRuntime](https://github.com/N64Recomp/N64ModernRuntime)
+(ultramodern + RT64 + librecomp).
 
-### Japan
+**This fork is not a remake.** It aims to run the original game faithfully on
+modern hardware while adding conveniences that make it more comfortable to play —
+widescreen-friendly rendering, keyboard/gamepad support, easy saving, and a
+native window — without touching pacing, mechanics, or the heart of what makes
+HM64 special.
 
-The repository now has initial support for Japanese-version builds.
+---
 
-## Setting up
-1. Install [WSL2](https://learn.microsoft.com/en-us/windows/wsl/install)
-1. WSL: `sudo apt-get update && sudo apt install -y python3 pip binutils-mips-linux-gnu gcc-mips-linux-gnu build-essential wget`
+## Philosophy
 
-### WSL Workflow
-1. `git clone --recursive https://github.com/harvestwhisperer/hm64-decomp.git`
-1. `cd hm64-decomp`
-1. `sudo chmod +x tools/setup.sh`
-1. `sudo tools/setup.sh`. This will fetch needed system packages not already installed, Splat, GCC 2.7.2, and the necessary GCC binutils for compiling and linking.
-1. Copy `baserom.us.z64` to the project's root directory (must provide your own and must be in big endian/z64 format).
-1. Run `make setup && make` (with `VERBOSE=1` optional)
+> *Bring Harvest Moon 64 to PC with respectful quality-of-life improvements,
+> while staying true to the spirit, pacing, atmosphere, and heart of the
+> original game.*
 
-## Asset extraction
+Every change in this fork should feel like it belongs. If a feature would
+make HM64 feel like a different game, it does not belong here.
 
-### Sprites
+---
 
-Sprites can be extracted and converted to png files using the `extract.py` script in the `tools` directory (`make extract-sprites` or `cd tools && python3 extract_sprites.py`). Extracted assets will be put in `./assets/sprites` folder. The locations for all used sprite assets are listed in the `sprite_addresses.csv` file in the tools directory.
+## Current Status
 
-There are two sprite asset formats used. Both types have a spritesheet at the beginning and an asset lookup table that follows it. Type 1 (used with character and map object sprites) includes a separate spritesheet index at the end of the asset, while type 2 (for smaller sprites, such as overlay icons) has the spritesheet index at the beginning of the actual spritesheet. Thus, the format for `sprite_addresses.csv` is: 
-- type 1: spritesheet start, asset lookup table start, spritesheet index start, asset end, and asset name
-- type 2: spritesheet start, asset lookup table start, asset end, and asset name.
+> ⚠️ **Early testing.** The project is actively being developed. Expect rough
+> edges.
 
-### Animations
+| Area                        | Status                            |
+|-----------------------------|-----------------------------------|
+| Decomp (US)                 | ✅ 100% complete                  |
+| Title screen / main menu    | ✅ Renders correctly              |
+| Keyboard input              | ✅ Working                        |
+| Gamepad input               | ✅ Working (first detected device) |
+| Save / load                 | ✅ Implemented (`hm64.sav`)       |
+| SDL2 audio backend          | ✅ Implemented                    |
+| Gameplay (past title screen)| 🔧 In progress / unstable         |
+| Audio reliability           | 🔧 In progress                    |
+| Japan version               | 🔧 Basic scaffolding only         |
+| Widescreen / resolution     | 📋 Planned                        |
+| Settings / config file      | 📋 Planned                        |
 
-The game contains two layers of animation data: animation scripts compiled in the data section and another set of metadata stored on the sprite asset in the binary section of the rom. The binary data contains metadata for the animation sequence (total frame count, duration in game ticks, contains audio trigger) and metadata for the final rendered bitmap. The scripts are bitpacked arrays that contain an index into the animation metadata table, an animation type, and a flag for whether to flip horizontally.
+See [ROADMAP.md](ROADMAP.md) for the full breakdown.
 
-#### Animation Scripts
- 
-These animation scripts are automatically generated as `.inc.c` files by Splat (via an extension), but they can be manually generated as well via `make extract-animation-scripts`. Running this script will generate a c file in `src/data/animations` for each specified asset in the `animation_addresses.csv` file. 
+---
 
-### Gifs
+## Quick Start
 
-There's now support for converting animations to gifs. These seem to be working with all sprites, but there are issues with sprite anchoring for frames with layered sprites.
+### Requirements
 
-To create gifs, simply run `make extract-animations`, which will fetch the animation metadata, necessary sprites, and then run the gif conversion script, with all the generated assets in the `/assets/animations` directory. 
+You need to supply your own legally obtained `baserom.us.z64` ROM dump
+(big-endian / Z64 format, SHA-1: `90631460f1876a14849df0541d534012b410a34c`).
+The project cannot distribute ROM data.
 
-### Text
+### Windows (via WSL2) — Recommended for Windows users
 
-Text data (including decoding of control characters that encode character avatar information, new lines, etc.) can now be dumped via `make extract-texts`. Currently, only English characters are supported (there appears to be at least one text bank in Japanese included in the US version of the game).
+1. **Install WSL2** – [Microsoft guide](https://learn.microsoft.com/en-us/windows/wsl/install)
 
-The text system has two key components: special opcode characters (0-10), which `system/message.c` functions parse and use to modify message boxes and printing, and a 1-byte bitfield number that appears every 8 characters. The bitfield encodes which characters in an 8-character stream are 1 or 2 bytes. I.e., 0x03 (b0000 0011) has bits 1 and 2 set, which means the first and second characters are 2-bytes long, while the rest are 1 byte.
+2. **Inside WSL**, install system packages:
+   ```sh
+   sudo apt-get update
+   sudo apt install -y \
+     build-essential cmake ninja-build clang \
+     libsdl2-dev \
+     python3 python3-pip \
+     binutils-mips-linux-gnu gcc-mips-linux-gnu wget
+   ```
 
-The character values themselves are used by the game code as offsets into the font texture array, adjusted for the opcode characters by subtracting 11. 
+3. **Clone the repository** (with submodules):
+   ```sh
+   git clone --recursive https://github.com/awest813/hm64-pc.git
+   cd hm64-pc
+   ```
 
-### Dialogue Bytecode
+4. **Run the setup script** (installs Python deps, GCC 2.7.2, Splat):
+   ```sh
+   chmod +x tools/setup.sh
+   sudo tools/setup.sh
+   ```
 
-Dialogue bytecode can be both compiled (from DSL) and disassembled into text and json via `make extract-dialogues` (only a handful of dialogue bytecode segments are listed out currently). The dialogue bytecode is a somewhat sophisticated system that allows for branching to different texts within a text bank based on various conditions (game variable values, like NPC affection; random values; special dialogue status bits) and also setting game variable values and special dialogue bits. The bytecode also supports spawning sub-dialogue boxes (such as with choice menus).
+5. **Place your ROM** in the project root:
+   ```sh
+   cp /path/to/baserom.us.z64 .
+   ```
 
-Decompiled dialogue bytecode can be found in `src/bytecode/dialogues`.
+6. **Build everything** (ROM → recomp → PC binary):
+   ```sh
+   make setup && make recomp
+   ```
 
-### Maps
+7. **Run the game:**
+   ```sh
+   ./recomp/build/hm64_pc
+   ```
 
-Map tiles and "core map objects" can now be extracted via `make extract-map-sprites`, and maps can now be rendered in Blender via the `./tools/modding/map/blender_import.py` script (follow the README in that directory for more information).
+### Linux (native)
 
-Map assets consist of 10 sub-assets:
-- 1.) The map grid information, which includes basic map metadata and a mapping between tile number and grid position.
-- 2.) Mesh data, which is essentially tile vertex information. This consists of two parts:
-    - a.) Individual vertex information, which contains a pointer to its coordinate data, how many vertices to use per tile, y offest information, etc.
-    - b.) Drawing information, which includes flags, coloring data, and bitfields that encapsulate vertex order for triangle drawing commands
-- 3.) Terrain quads used for certain entity height calculations
-- 4.) Grid to level interaction indicies (i.e., which squares in the grid have a specific flag the game can use for game interaction logic, such as the home TV, signs, the vineyard wine barrel, etc.)
-- 5.) Core map objects data (coordinates and flags)
-- 6.) Tile textures
-- 7.) Tile palettes
-- 8.) Core map object textures
-- 9.) Core map object palettes
-- 10.) "Map addtions" metadata (new geometry added to the map once they're unlocked in the game, such as the house extensions)
+Same steps as WSL2 above, but skip step 1 and use your distro's package manager.
+On Arch-based systems, substitute `libsdl2` for `libsdl2-dev` and
+`mipsel-linux-gnu-gcc` may differ by distro — check your package repos.
 
-The "core map objects" are sprites that are always rendered on top of the geometry, independent of game status, which includes things like trees and fences. 
+---
 
-The map code manages two separate display lists for the tiles and ground objects (foragable items) and appends other sprites to the scene graph indirectly via calling `sprite.c` functions (i.e., weather sprites, map objects set up by the game, map additions, and the core map objects).
+## Build Reference
 
-### Cutscenes
+| Command                  | What it does                                               |
+|--------------------------|------------------------------------------------------------|
+| `make setup && make`     | Build the decomp and produce `build/hm64.elf` + `hm64.z64`|
+| `make recomp-generate`   | Run n64recomp on the ELF → generates `recomp/output/funcs/`|
+| `make recomp-build`      | Configure + compile the PC executable                      |
+| `make recomp`            | All three recomp steps in one command                      |
+| `VERBOSE=1 make`         | Show full compiler output during decomp build              |
 
-The repo now supports parsing cutscene bytecode and building the rom with matching DSL (see src/bytecode/cutscenes for matched segments). 
+The final binary is at **`recomp/build/hm64_pc`**.
 
-The bytecode system works by having variable length messages where the first two bits correspond to an index in a cutscene handler function table defined in `cutscene.c`. 
+#### Debug build
 
-As an example, opcode 88 corresponds to `cutsceneHandlerSetSong`, which is the 88th function in the cutscene function table (starting count from 0). Each opcode is variable length, where the rest of the data after the first two bits are used by the handlng function (these data are usually parameters for other function calls). In the case of `cutsceneHandlerSetSong`, the parameters are song index (16 bits), a pointer to the rom address for the song start (32 bits), and a pointer to the rom address for the song end (32 bits). The handler function then calls `setSong(songIndex, songStart, songEnd);` from `audio.c` and increments the bytecode pointer for the next message.
+```sh
+cmake -S recomp -B recomp/build-debug -DCMAKE_BUILD_TYPE=Debug
+cmake --build recomp/build-debug --parallel
+```
 
-Compared to the dialogue bytecode, the cutscene bytecode is much more sophisticated and involves multiple bytecode executors. I.e., the initial executor can spawn child executors that execute different segments of the bytecode and can spawn their own child executors as well. To handle this, the default `make extract-cutscenes` command generates 3 parses of each bytecode segment: a linear scan, a graph-based scan that tracks spawns, branches, and subroutine jumps, and a disassembled assembly file.
+---
 
-## Modding
+## Controls
 
-See the `dev` branch for more information.
+### Keyboard (default)
+
+| Key(s)          | N64 button                          |
+|-----------------|-------------------------------------|
+| Enter           | Start                               |
+| Z               | Z trigger                           |
+| X               | B button                            |
+| C               | A button                            |
+| Shift           | R trigger                           |
+| Q               | L trigger                           |
+| Arrow keys      | D-Pad                               |
+| W / A / S / D   | Analog stick                        |
+| I / J / K / L   | C-Up / C-Left / C-Down / C-Right    |
+| F11             | Toggle fullscreen                   |
+| Escape          | Quit                                |
+
+### Gamepad
+
+A connected gamepad (Xbox, PlayStation, etc.) is detected automatically.
+Standard button mappings apply. Left-stick dead zone is ~10% to prevent drift.
+
+---
+
+## Save Files
+
+Progress is saved in **`hm64.sav`**, created automatically on first save.
+The file is placed next to the `hm64_pc` binary (or in the working directory
+when launching from elsewhere).
+
+| Offset           | Contents                  |
+|------------------|---------------------------|
+| 0x0000 – 0x0FFF  | Save slot 1 (4 KB)        |
+| 0x1000 – 0x1FFF  | Save slot 2 (4 KB)        |
+| 0x2000 – 0x2FFF  | Save slot 3 (4 KB)        |
+| 0x3000 – 0x3FFF  | Save slot 4 (4 KB)        |
+| 0x4000 – 0x7FFF  | Farm-ranking data (16 KB) |
+
+Delete `hm64.sav` to reset all saves (equivalent to removing the cartridge
+battery on original hardware).
+
+---
+
+## Troubleshooting
+
+| Symptom                            | Likely cause / fix                                             |
+|------------------------------------|----------------------------------------------------------------|
+| Black screen, game thread hung     | `nuGfxFuncSet` callback issue — check `recomp/patches/nusys_patches.cpp` |
+| Black screen, no crash             | RDP tasks not submitted — check nusys_patches                  |
+| "No Controller" at startup         | `nuContInit` not returning 1 — check nusys_patches             |
+| No audio / audio crackling         | SDL2 audio device init failed — check `recomp/platform/audio.cpp` |
+| Gamepad not detected               | Check `recomp/platform/input.cpp`; try unplugging and replugging |
+| Analog stick drifts                | Adjust `GAMEPAD_DEAD_ZONE` in `recomp/platform/input.cpp`     |
+| Save/load does nothing             | Check that `hm64.sav` is writable in the binary's directory   |
+| Build fails: missing submodule     | Run `git submodule update --init --recursive`                  |
+| Build fails: `output/funcs/` empty | Run `make recomp-generate` before `make recomp-build`          |
+| ROM not found on launch            | Pass ROM path: `./hm64_pc path/to/baserom.us.z64`              |
+| Window too small                   | Press **F11** to toggle fullscreen                             |
+| `cmake: command not found`         | Install cmake 3.20+: `sudo apt install cmake`                  |
+| `SDL2 not found` during cmake      | Install SDL2 dev package: `sudo apt install libsdl2-dev`       |
+
+---
 
 ## Contributing
 
-Contributions are much welcome. There are a few areas of work still do in the project:
-- Cleaning up fake/forced matches (searchable under `FIXME`)
-- Research into function, struct member, flag, and variable purposes and making accurate labels. This also includes adding macro values, such as player actions (see `player.h`)
-- Cleaning up and improving asset tools (most are heavily vibecoded)
-- Improving labeling and macro usage in bytecode files for readability
-- JP version matching (only basic project scaffolding is done so far)
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for
+full guidelines. Quick summary:
 
-For function matching work, Decomp.me has a `Harvest Moon 64` compiler preset that's selectable when creating new scratches.
+**High-priority areas right now:**
+- Testing and reporting gameplay bugs past the title screen
+- Improving audio stability and playback accuracy
+- Cleaning up fake/forced matches in decomp code (search `FIXME`)
+- Researching function, struct, and variable purposes for better labels
+- JP version matching (only scaffolding exists)
+
+**Design principles for this fork:**
+- Changes should feel at home in the original game
+- Quality-of-life improvements must be non-invasive
+- No feature that would change the core feel, pacing, or progression
+- Bug fixes that improve the experience without altering identity are always welcome
+
+For decomp.me matching work, select the **Harvest Moon 64** compiler preset
+when creating a new scratch.
+
+---
+
+## Project Structure
+
+```
+hm64-pc/
+├── src/          # Decompiled game source (~92k lines of C)
+├── recomp/       # PC port (n64recomp integration, SDL2 backends, patches)
+│   ├── platform/ # SDL2 window / audio / input backends + main()
+│   ├── patches/  # RECOMP_PATCH overrides for PC-specific behaviour
+│   └── lib/      # N64ModernRuntime submodule (ultramodern + librecomp)
+├── tools/        # Build tools and asset extraction scripts
+├── assets/       # Extracted sprites, textures, maps, animations
+├── config/       # Region-specific linker and build configuration
+└── lib/          # N64 SDK libraries (libultra, nusys, etc.)
+```
+
+See [`recomp/README.md`](recomp/README.md) for detailed PC port internals.
+
+---
+
+## Decomp Notes (for contributors)
+
+The US version is **100% decompiled**, including:
+- All game functions, data, and rodata
+- All library functions (libultra, NuSystem)
+- Cutscene DSL (compiles to game bytecode)
+- Dialogue DSL (compiles to game bytecode)
+- Automatic text extraction and transpilation
+
+The build also supports **shiftability** (for modding). See the `dev` or
+`dev-qol` branch for modding-friendly starting points.
+
+---
+
+## Legal
+
+This project does not include and cannot distribute ROM data.
+You must provide your own legally obtained `baserom.us.z64`.
+
+Harvest Moon 64 is © 1999 Victor Interactive Software / Marvelous Entertainment.
+
+---
+
+## Roadmap
+
+See [ROADMAP.md](ROADMAP.md) for current priorities and planned work.
