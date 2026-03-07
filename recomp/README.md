@@ -95,10 +95,25 @@ relevant functions are:
 | `renderTitleScreen()`      | Builds the display list and submits a GFX task    |
 
 Expected result: the game window shows the *Harvest Moon 64* logo, copyright
-text, and the "Press Start / How to Play" menu.  Input: press **Enter** to
-simulate the N64 Start button.
+text, and the "Press Start / How to Play" menu.
 
-If the title screen renders correctly the RDP/RSP pipeline is working.
+### Default keyboard controls
+
+| Key(s)          | N64 button        |
+|-----------------|-------------------|
+| Enter           | Start             |
+| Z               | Z trigger         |
+| X               | B button          |
+| C               | A button          |
+| Shift           | R trigger         |
+| Q               | L trigger         |
+| Arrow keys      | D-Pad             |
+| W / A / S / D   | Analog stick      |
+| I / J / K / L   | C-Up / C-Left / C-Down / C-Right |
+| Escape          | Quit              |
+
+A connected gamepad is also supported automatically (first detected device).
+Left-stick dead zone is ~10 % of full range to prevent drift.
 
 ## RDP / RSP
 
@@ -120,11 +135,13 @@ See `patches/title_patches.cpp` for an example (`mainproc` replacement).
 
 ## Troubleshooting
 
-| Symptom                        | Likely cause / fix                              |
-|--------------------------------|-------------------------------------------------|
-| Black screen, no crash         | RDP tasks not submitted; check nusys_patches    |
-| Crash in DMA path              | ROM DMA issue; add a patch in librecomp config  |
-| No audio                       | SDL2 audio device init failed; check audio.cpp  |
-| Controller not responding      | Check input.cpp; verify SDL2 gamepad mapping    |
-| Build fails: missing submodule | Run `git submodule update --init --recursive`   |
-| Build fails: missing funcs dir | Run `make recomp-generate` first                |
+| Symptom                        | Likely cause / fix                                         |
+|--------------------------------|------------------------------------------------------------|
+| Black screen, game thread hung | `nuGfxFuncSet` not storing callback; check nusys_patches   |
+| Black screen, no crash         | RDP tasks not submitted; check nusys_patches               |
+| Crash in DMA path              | ROM DMA issue; add a patch in librecomp config             |
+| No audio                       | SDL2 audio device init failed; check audio.cpp             |
+| Controller not responding      | Check input.cpp; verify SDL2 gamepad mapping               |
+| Analog stick drifts            | Dead zone too small; adjust GAMEPAD_DEAD_ZONE in input.cpp |
+| Build fails: missing submodule | Run `git submodule update --init --recursive`              |
+| Build fails: missing funcs dir | Run `make recomp-generate` first                           |

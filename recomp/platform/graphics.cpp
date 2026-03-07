@@ -21,6 +21,10 @@ static constexpr int SCREEN_W = 320;
 static constexpr int SCREEN_H = 240;
 static constexpr int WINDOW_SCALE = 2; // default 2× upscale → 640×480
 
+// Declared in nusys_patches.cpp; called once per vsync to drive the game's
+// retrace mechanism (gfxRetraceCallback → drawFrame + stepMainLoop advance).
+extern void hm64_invoke_retrace_callback();
+
 namespace hm64::graphics {
 
 static SDL_Window* s_window   = nullptr;
@@ -33,7 +37,7 @@ void init() {
     }
 
     s_window = SDL_CreateWindow(
-        "Harvest Moon 64 – PC (n64recomp)",
+        "Harvest Moon 64 - PC (n64recomp)",
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
         SCREEN_W * WINDOW_SCALE,
         SCREEN_H * WINDOW_SCALE,
@@ -66,17 +70,26 @@ void destroy_renderer(void* /*renderer*/) {
 void render_frame(void* /*renderer*/,
                   const void* /*rdp_commands*/,
                   uint32_t    /*rdp_command_count*/) {
-    // Poll input every frame here as a convenience.
+    // Poll input first so that keyboard/gamepad state is up-to-date before
+    // the retrace callback reads controller data via nuContDataGetAll.
     hm64::input::poll();
 
-    // If the user closed the window or pressed Escape, hm64::input::poll()
-    // already consumed the SDL_QUIT / SDL_KEYDOWN(Escape) events.
-    // Re-inject a synthetic SDL_QUIT so ultramodern's own event loop also
-    // sees the request and can shut down cleanly.
-    if (hm64::input::should_quit()) {
+    // Drive the game's vsync/retrace mechanism.  On real N64 hardware,
+    // NuSystem's graphics scheduler thread called gfxRetraceCallback each
+    // vsync; here the render thread takes that role.  This unblocks the game
+    // thread's busy-wait in mainLoop() by setting stepMainLoop = TRUE.
+    hm64_invoke_retrace_callback();
+
+    // If the user closed the window or pressed Escape, inject a single
+    // SDL_QUIT so ultramodern's own event loop also sees the request and
+    // can shut down cleanly.  We guard with a flag so the event is queued
+    // at most once (avoiding flooding the event queue every frame).
+    static bool s_quit_pushed = false;
+    if (hm64::input::should_quit() && !s_quit_pushed) {
         SDL_Event quit_event{};
         quit_event.type = SDL_QUIT;
         SDL_PushEvent(&quit_event);
+        s_quit_pushed = true;
     }
 
     // RT64 handles the actual buffer swap via the SDL window handle.
