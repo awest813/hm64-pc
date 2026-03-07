@@ -111,6 +111,7 @@ text, and the "Press Start / How to Play" menu.
 | W / A / S / D   | Analog stick      |
 | I / J / K / L   | C-Up / C-Left / C-Down / C-Right |
 | Escape          | Quit              |
+| F11             | Toggle fullscreen |
 
 A connected gamepad is also supported automatically (first detected device).
 Left-stick dead zone is ~10 % of full range to prevent drift.
@@ -145,3 +146,5 @@ See `patches/title_patches.cpp` for an example (`mainproc` replacement).
 | Analog stick drifts            | Dead zone too small; adjust GAMEPAD_DEAD_ZONE in input.cpp |
 | Build fails: missing submodule | Run `git submodule update --init --recursive`              |
 | Build fails: missing funcs dir | Run `make recomp-generate` first                           |
+| Window too small               | Press F11 to toggle fullscreen                             |
+| ROM not found on launch        | Pass ROM path as argument: `./hm64_pc path/to/baserom.us.z64` |

@@ -10,13 +10,15 @@
  *   Q           → L trigger
  *   Arrow keys  → D-Pad
  *   WASD        → Analog stick
- *   IJKL        → C-Up / C-Down / C-Left / C-Right
+ *   IJKL        → C-Up / C-Left / C-Down / C-Right
+ *   F11         → Toggle fullscreen
  *
  * SDL2 gamepad (first detected controller) is also supported using the
  * standard SDL GameController API mapping.
  */
 
 #include "input.h"
+#include "graphics.h"
 
 #include <SDL2/SDL.h>
 
@@ -59,7 +61,11 @@ static constexpr int8_t KEYBOARD_STICK_MAGNITUDE = 80;
 static constexpr int16_t GAMEPAD_DEAD_ZONE = 3200;
 
 void init() {
-    SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER | SDL_INIT_EVENTS);
+    if (SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER | SDL_INIT_EVENTS) != 0) {
+        fprintf(stderr, "[hm64::input] SDL_InitSubSystem failed: %s\n"
+                        "  Keyboard and gamepad input may not work correctly.\n",
+                SDL_GetError());
+    }
 
     // Open the first available gamepad (optional)
     for (int i = 0; i < SDL_NumJoysticks(); i++) {
@@ -87,10 +93,12 @@ void poll() {
     while (SDL_PollEvent(&event)) {
         if (event.type == SDL_QUIT) {
             s_quit = true;
-        }
-        if (event.type == SDL_KEYDOWN &&
-            event.key.keysym.sym == SDLK_ESCAPE) {
+        } else if (event.type == SDL_KEYDOWN &&
+                   event.key.keysym.sym == SDLK_ESCAPE) {
             s_quit = true;
+        } else if (event.type == SDL_KEYDOWN &&
+                   event.key.keysym.sym == SDLK_F11) {
+            hm64::graphics::toggle_fullscreen();
         }
     }
 

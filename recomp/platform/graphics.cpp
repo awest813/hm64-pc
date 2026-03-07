@@ -27,13 +27,15 @@ extern void hm64_invoke_retrace_callback();
 
 namespace hm64::graphics {
 
-static SDL_Window* s_window   = nullptr;
+static SDL_Window* s_window      = nullptr;
+static bool        s_fullscreen  = false;
 
 void init() {
     if (SDL_InitSubSystem(SDL_INIT_VIDEO) != 0) {
         fprintf(stderr, "[hm64::graphics] SDL_InitSubSystem(VIDEO) failed: %s\n",
                 SDL_GetError());
-        abort();
+        SDL_Quit();
+        exit(EXIT_FAILURE);
     }
 
     s_window = SDL_CreateWindow(
@@ -46,8 +48,19 @@ void init() {
     if (!s_window) {
         fprintf(stderr, "[hm64::graphics] SDL_CreateWindow failed: %s\n",
                 SDL_GetError());
-        abort();
+        SDL_QuitSubSystem(SDL_INIT_VIDEO);
+        SDL_Quit();
+        exit(EXIT_FAILURE);
     }
+}
+
+void toggle_fullscreen() {
+    if (!s_window) {
+        return;
+    }
+    s_fullscreen = !s_fullscreen;
+    SDL_SetWindowFullscreen(s_window,
+        s_fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
 }
 
 void deinit() {
