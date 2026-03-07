@@ -17,6 +17,7 @@
  *   - First detected controller is opened automatically
  *   - Hot-plugging is supported (connect/disconnect while running)
  *   - Right stick and face buttons map to C-buttons for HM64 menu/camera use
+ *   - Both left and right trigger axes map to the N64 Z button
  */
 
 #include "input.h"
@@ -213,10 +214,13 @@ void poll() {
         if (ry > GAMEPAD_DEAD_ZONE)      buttons |= N64_C_DOWN;
         else if (ry < -GAMEPAD_DEAD_ZONE) buttons |= N64_C_UP;
 
-        // Z-trigger (left trigger axis)
-        int16_t zt = SDL_GameControllerGetAxis(s_gamepad,
-                                               SDL_CONTROLLER_AXIS_TRIGGERLEFT);
-        if (zt > 8000) buttons |= N64_Z_TRIG;
+        // Z-trigger: accept either left or right trigger so that players whose
+        // muscle memory puts Z on the right trigger are also covered.
+        int16_t zt_l = SDL_GameControllerGetAxis(s_gamepad,
+                                                 SDL_CONTROLLER_AXIS_TRIGGERLEFT);
+        int16_t zt_r = SDL_GameControllerGetAxis(s_gamepad,
+                                                 SDL_CONTROLLER_AXIS_TRIGGERRIGHT);
+        if (zt_l > 8000 || zt_r > 8000) buttons |= N64_Z_TRIG;
     }
 
     s_buttons = buttons;

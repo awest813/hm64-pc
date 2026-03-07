@@ -74,6 +74,20 @@ void queue_samples(const int16_t* samples, int num_samples) {
     if (s_dev == 0 || samples == nullptr || num_samples <= 0) {
         return;
     }
+    // Prevent latency build-up: if the audio queue is already well ahead of
+    // real-time playback, drop this buffer so the queue can drain.  Without
+    // this guard, audio can drift seconds behind the visuals after extended
+    // play sessions or when the host system is briefly under load.
+    //
+    // Threshold: SAMPLE_RATE * 2 channels * sizeof(int16_t) / 4
+    //   = 32000 Hz * 2 * 2 bytes / 4 = 32000 bytes ≈ 250 ms at 32 kHz stereo.
+    // Allows a comfortable cushion against short glitches without letting
+    // the queue grow unboundedly.  (SAMPLE_RATE is defined above as 32000.)
+    static constexpr Uint32 MAX_QUEUED_BYTES =
+        static_cast<Uint32>(SAMPLE_RATE) * 2u * sizeof(int16_t) / 4u;
+    if (SDL_GetQueuedAudioSize(s_dev) > MAX_QUEUED_BYTES) {
+        return;
+    }
     // num_samples is stereo pairs; each pair is 2×int16_t = 4 bytes
     SDL_QueueAudio(s_dev, samples,
                    static_cast<Uint32>(num_samples * 2 * sizeof(int16_t)));

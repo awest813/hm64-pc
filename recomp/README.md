@@ -86,7 +86,8 @@ working directory.
 ### Gamepad
 
 - Left stick → analog stick (dead zone in `input.cpp`)
-- D-pad / A / B / Start / shoulders / trigger mapped
+- D-pad / A / B / Start / shoulders mapped
+- **Left or right trigger** → Z button (either trigger works)
 - C-button equivalents:
   - Right stick directions
   - Y → C-Up
