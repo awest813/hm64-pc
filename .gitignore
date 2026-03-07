@@ -32,6 +32,7 @@ asm/
 !config/jp/undefined_funcs.txt
 !config/jp/undefined_syms.txt
 !tools/requirements.txt
+!**/CMakeLists.txt
 bin/
 build/
 expected/
