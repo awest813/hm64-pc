@@ -487,7 +487,7 @@ void rotateVector3D(Vec3f inputVec, Vec3f* outputVec, Vec3f rotationAngles) {
     if (tempRadiansZ != 0.0f) {
         
         outputVec->x = (-tempY * sinZ) + (tempX * cosZ);
-        outputVec->y = (tempY * sinZ) + (tempX * sinZ);
+        outputVec->y = (tempY * cosZ) + (tempX * sinZ);
         outputVec->z = tempZ;
 
     }
@@ -742,7 +742,7 @@ Vec3f getMovementVectorFromDirection(f32 zDisplacement, u8 direction, f32 yOffse
 
         if (z != 0.0f) {
             vec2.x = (-temp2 * sinZ) + (temp1 * cosZ);
-            vec2.y = (temp2 * sinZ) + (temp1 * sinZ);
+            vec2.y = (temp2 * cosZ) + (temp1 * sinZ);
             vec2.z = temp3;
         }
 

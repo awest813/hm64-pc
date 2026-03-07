@@ -121,10 +121,15 @@ name = "osInvalICache"
 # ---------------------------------------------------------------------------
 # NuSystem stubs
 # ---------------------------------------------------------------------------
-# NuSystem functions are replaced by the ultramodern/librecomp runtime layer.
-
-[[patches.stub]]
-name = "nuGfxInit"
+# Most NuSystem functions are replaced by the ultramodern/librecomp runtime.
+#
+# NOT stubbed (recompiled game code runs):
+#   nuGfxInit    – runs as-is so it can initialise nuGfxCfb_ptr, nuGfxZBuffer,
+#                  and nuGfxUcode.  The threading helpers it calls
+#                  (nuGfxThreadStart, nuGfxTaskMgrInit) are still stubbed.
+#   nuGfxSetCfb  – pure data operation; sets nuGfxCfb_ptr from the passed
+#                  framebuffer array so clearFramebuffer() generates correct
+#                  gDPSetColorImage addresses for RT64.
 
 [[patches.stub]]
 name = "nuGfxThreadStart"
@@ -134,12 +139,6 @@ name = "nuGfxTaskStart"
 
 [[patches.stub]]
 name = "nuGfxTaskAllEndWait"
-
-[[patches.stub]]
-name = "nuGfxSetCfb"
-
-[[patches.stub]]
-name = "nuGfxSetZBuffer"
 
 [[patches.stub]]
 name = "nuGfxSwapCfb"

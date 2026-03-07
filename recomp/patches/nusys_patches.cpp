@@ -1,10 +1,20 @@
 /**
  * nusys_patches.cpp – PC replacements for NuSystem API stubs.
  *
- * The N64Recomp configuration (hm64.us.toml) stubs out all nuGfx* and
+ * The N64Recomp configuration (hm64.us.toml) stubs out most nuGfx* and
  * nuCont* functions so the runtime can intercept them.  This file provides
  * the implementations that bridge between the recompiled game code and the
  * ultramodern runtime.
+ *
+ * Functions NOT patched here (recompiled game code runs directly):
+ *   nuGfxInit      – runs as-is; initialises nuGfxCfb_ptr, nuGfxZBuffer, and
+ *                    nuGfxUcode from the game's FrameBuf / Z-buffer constants.
+ *                    The NuSystem threading calls inside it (nuGfxThreadStart,
+ *                    nuGfxTaskMgrInit) are stubbed in hm64.us.toml so they
+ *                    do nothing; ultramodern provides its own task execution.
+ *   nuGfxSetCfb    – pure data: sets nuGfxCfb_ptr = framebuf[0] in RDRAM.
+ *                    Removed from stubs so the recompiled version updates
+ *                    the framebuffer globals that clearFramebuffer() reads.
  *
  * The macro signatures here follow the N64ModernRuntime librecomp convention:
  *   void RECOMP_FUNC(uint8_t* rdram, recomp_context* ctx);
@@ -50,14 +60,6 @@ void hm64_invoke_retrace_callback() {
     recomp_context ctx{};
     ctx.r4 = 0; // pendingGfx = 0 (no outstanding RSP tasks at vsync entry)
     recomp_gfxRetraceCallback(rdram, &ctx);
-}
-
-// ---------------------------------------------------------------------------
-// nuGfxInit  – replaced by ultramodern graphics initialisation
-// ---------------------------------------------------------------------------
-RECOMP_PATCH void nuGfxInit(uint8_t* rdram, recomp_context* ctx) {
-    // ultramodern initialises graphics when the renderer callback fires;
-    // nothing to do here at startup.
 }
 
 // ---------------------------------------------------------------------------
