@@ -1,0 +1,69 @@
+/**
+ * hm64::audio – SDL2 audio backend implementation.
+ *
+ * Uses a simple ring-buffer approach: the recompiled game's RSP audio ucode
+ * (handled by ultramodern) delivers finished sample buffers via queue_samples().
+ * Those buffers are fed into SDL's audio queue for playback.
+ *
+ * Requires: SDL2 (linked via the CMake target SDL2::SDL2).
+ */
+
+#include "audio.h"
+
+#include <SDL2/SDL.h>
+
+#include <cstdio>
+#include <cstring>
+
+namespace hm64::audio {
+
+static SDL_AudioDeviceID s_dev = 0;
+// HM64 calls osAiSetFrequency(32000) during audio initialisation, so the
+// SDL2 device is opened at that rate.  N64 hardware supports up to 48 kHz,
+// but matching the game's own frequency avoids resampling artefacts.
+static constexpr int SAMPLE_RATE = 32000;
+
+bool init() {
+    if (SDL_InitSubSystem(SDL_INIT_AUDIO) != 0) {
+        fprintf(stderr, "[hm64::audio] SDL_InitSubSystem(AUDIO) failed: %s\n",
+                SDL_GetError());
+        return false;
+    }
+
+    SDL_AudioSpec desired{};
+    desired.freq     = SAMPLE_RATE;
+    desired.format   = AUDIO_S16SYS;
+    desired.channels = 2;
+    desired.samples  = 512;   // buffer size in samples
+    desired.callback = nullptr; // push mode
+
+    SDL_AudioSpec obtained{};
+    s_dev = SDL_OpenAudioDevice(nullptr, 0, &desired, &obtained, 0);
+    if (s_dev == 0) {
+        fprintf(stderr, "[hm64::audio] SDL_OpenAudioDevice failed: %s\n",
+                SDL_GetError());
+        return false;
+    }
+
+    SDL_PauseAudioDevice(s_dev, 0);
+    return true;
+}
+
+void deinit() {
+    if (s_dev != 0) {
+        SDL_CloseAudioDevice(s_dev);
+        s_dev = 0;
+    }
+    SDL_QuitSubSystem(SDL_INIT_AUDIO);
+}
+
+void queue_samples(const int16_t* samples, int num_samples) {
+    if (s_dev == 0 || samples == nullptr || num_samples <= 0) {
+        return;
+    }
+    // num_samples is stereo pairs; each pair is 2×int16_t = 4 bytes
+    SDL_QueueAudio(s_dev, samples,
+                   static_cast<Uint32>(num_samples * 2 * sizeof(int16_t)));
+}
+
+} // namespace hm64::audio

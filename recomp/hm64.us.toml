@@ -1,0 +1,191 @@
+# N64Recomp configuration for Harvest Moon 64 (US version)
+#
+# This file configures the N64Recomp static recompiler to convert the compiled
+# HM64 MIPS ELF binary into C code that can be natively compiled for PC.
+#
+# Workflow:
+#   1. Build the decomp: make -> produces build/hm64.elf
+#   2. Run recomp:       make recomp-generate -> runs n64recomp on hm64.elf
+#   3. Build PC port:    make recomp-build -> compiles generated C + runtime
+#
+# Reference: https://github.com/N64Recomp/N64Recomp
+
+[input]
+# Path to the compiled ELF produced by the decompilation build
+elf_path = "../build/hm64.elf"
+
+# Path to the original ROM (needed for binary sections not in the ELF)
+rom_path = "../baserom.us.z64"
+
+[output]
+# Directory for recompiled per-function C files
+func_path = "output/funcs"
+
+# Optional: generate patches in single-file mode (useful for iterating on fixes)
+# single_file_output = false
+
+# ---------------------------------------------------------------------------
+# RDP / RSP stubs
+# ---------------------------------------------------------------------------
+# These microcode tasks run on the RSP hardware. On PC they are handled by
+# the RDP/RSP emulation layer in N64ModernRuntime (via RT64).
+# The recompiler is told to stub them so the runtime can intercept the tasks.
+
+[[patches.stub]]
+name = "rspF3DEX2"
+
+[[patches.stub]]
+name = "rspAudio"
+
+# ---------------------------------------------------------------------------
+# OS / libultra stubs
+# ---------------------------------------------------------------------------
+# Functions that rely on N64-specific hardware and are replaced by the
+# ultramodern reimplementation in N64ModernRuntime.
+
+[[patches.stub]]
+name = "osInitialize"
+
+[[patches.stub]]
+name = "osCreateThread"
+
+[[patches.stub]]
+name = "osStartThread"
+
+[[patches.stub]]
+name = "osStopThread"
+
+[[patches.stub]]
+name = "osDestroyThread"
+
+[[patches.stub]]
+name = "osGetTime"
+
+[[patches.stub]]
+name = "osSetTime"
+
+[[patches.stub]]
+name = "osSendMesg"
+
+[[patches.stub]]
+name = "osRecvMesg"
+
+[[patches.stub]]
+name = "osJamMesg"
+
+[[patches.stub]]
+name = "osMesgQueueInit"
+
+[[patches.stub]]
+name = "osViSetMode"
+
+[[patches.stub]]
+name = "osViSetSpecialFeatures"
+
+[[patches.stub]]
+name = "osViSwapBuffer"
+
+[[patches.stub]]
+name = "osViGetCurrentFramebuffer"
+
+[[patches.stub]]
+name = "osVirtualToPhysical"
+
+[[patches.stub]]
+name = "osPiStartDma"
+
+[[patches.stub]]
+name = "osPiGetCmdQueue"
+
+[[patches.stub]]
+name = "osEPiStartDma"
+
+[[patches.stub]]
+name = "osAiSetFrequency"
+
+[[patches.stub]]
+name = "osAiGetLength"
+
+[[patches.stub]]
+name = "osWritebackDCache"
+
+[[patches.stub]]
+name = "osWritebackDCacheAll"
+
+[[patches.stub]]
+name = "osInvalDCache"
+
+[[patches.stub]]
+name = "osInvalICache"
+
+# ---------------------------------------------------------------------------
+# NuSystem stubs
+# ---------------------------------------------------------------------------
+# NuSystem functions are replaced by the ultramodern/librecomp runtime layer.
+
+[[patches.stub]]
+name = "nuGfxInit"
+
+[[patches.stub]]
+name = "nuGfxThreadStart"
+
+[[patches.stub]]
+name = "nuGfxTaskStart"
+
+[[patches.stub]]
+name = "nuGfxTaskAllEndWait"
+
+[[patches.stub]]
+name = "nuGfxSetCfb"
+
+[[patches.stub]]
+name = "nuGfxSetZBuffer"
+
+[[patches.stub]]
+name = "nuGfxSwapCfb"
+
+[[patches.stub]]
+name = "nuGfxSwapCfbFuncSet"
+
+[[patches.stub]]
+name = "nuGfxPreNMIFuncSet"
+
+[[patches.stub]]
+name = "nuGfxFuncSet"
+
+[[patches.stub]]
+name = "nuGfxDisplayOn"
+
+[[patches.stub]]
+name = "nuGfxDisplayOff"
+
+[[patches.stub]]
+name = "nuGfxTaskMgrInit"
+
+[[patches.stub]]
+name = "nuSiCallBackAdd"
+
+[[patches.stub]]
+name = "nuContInit"
+
+[[patches.stub]]
+name = "nuContDataGetAll"
+
+[[patches.stub]]
+name = "nuContDataGet"
+
+# ---------------------------------------------------------------------------
+# Audio (libmus) stubs
+# ---------------------------------------------------------------------------
+
+[[patches.stub]]
+name = "MusInitialize"
+
+[[patches.stub]]
+name = "MusSetMasterVolume"
+
+[[patches.stub]]
+name = "MusStartSong"
+
+[[patches.stub]]
+name = "MusStop"
