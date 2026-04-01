@@ -1,0 +1,12 @@
+[submodule "tools/n64recomp"]
+	path = tools/n64recomp
+	url = https://github.com/N64Recomp/N64Recomp.git
+	branch = main
+
+[submodule "recomp/lib/N64ModernRuntime"]
+	path = recomp/lib/N64ModernRuntime
+	url = https://github.com/N64Recomp/N64ModernRuntime.git
+	branch = main
+[submodule "recomp/lib/RT64"]
+	path = recomp/lib/RT64
+	url = https://github.com/rt64/rt64.git

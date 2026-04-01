@@ -1,0 +1,6443 @@
+name: Harvestmoon64 (North America)
+sha1: 90631460f1876a14849df0541d534012b410a34c
+
+options:
+  # base settings
+  basename: hm64
+  target_path: baserom.us.z64
+  platform: n64
+  compiler: GCC
+  base_path: ../..
+  find_file_boundaries: True
+  # paths  
+  asm_path: asm
+  src_path: src
+  build_path: build
+  asset_path: bin
+  extensions_path: tools/splat_ext
+  symbol_addrs_path: config/us/symbol_addrs.txt
+  undefined_funcs_auto_path: config/us/undefined_funcs_auto.txt
+  undefined_syms_auto_path: config/us/undefined_syms_auto.txt
+  ld_symbol_header_path: include/ld_symbols.h
+  # header
+  header_encoding: ASCII
+  # asm settings
+  asm_inc_header: ".include \"macro.inc\"\n.set noat\n.set noreorder\n"
+  asm_function_macro: glabel
+  asm_data_macro: dlabel
+  asm_emit_size_directive: True
+  generate_asm_macros_files: False
+  # disassembly settings
+  migrate_rodata_to_functions: True
+  # misc.
+  gfx_ucode: f3dex2
+  segment_symbols_style: makerom
+  libultra_symbols: True
+  # disassemble_all: True
+  # dump_symbols: True
+  
+segments:
+  - name: header
+    type: header
+    start: 0x0
+
+  - name: ipl3
+    type: bin
+    start: 0x40
+    vram: 0xA4000040
+    dir: makerom
+    subsegments:
+    - [ 0x40, hasm, boot/ipl3_boot]
+    - [ 0xB70, bin, rspboot_font]
+
+  - name: entry
+    type: code
+    start: 0x1000
+    vram: 0x80025C00
+    dir: makerom
+    extract: false
+    subsegments:
+      - [0x1000, hasm, entry]
+
+  - name: main
+    type: code
+    start: 0x1050
+    vram: 0x80025C50
+    bss_size: 0x113870
+    bss_contains_common: True
+    subalign: 8
+    subsegments:
+      - [ 0x1050, c, ../lib/nusys-1/src/nusys/nuboot]
+      - [ 0x1190, c, mainproc]
+      - [ 0x13F0, c, mainLoop]
+      - [ 0x1AC0, c, system/interpolation]
+      - [ 0x1C50, c, system/math]
+      - [ 0x1CF0, c, system/graphic]
+      - [ 0x4400, c, system/spriteDMAManager]
+      - [ 0x4570, c, system/sceneGraph]
+      - [ 0x4F30, c, system/sprite]
+      - [ 0x63E0, c, system/globalSprites]
+      - [ 0x9070, c, system/entity]
+      - [ 0xEBD0, c, system/map]
+      - [ 0x16C70, c, system/mapController]
+      - [ 0x181C0, c, system/audio]
+      - [ 0x18D70, c, system/message]
+      - [ 0x1E360, c, system/dialogue]
+      - [ 0x211E0, c, system/numberSprites]
+      - [ 0x21C60, c, system/cutscene]
+      - [ 0x281A0, c, system/controller]
+      - [ 0x28FA0, c, system/memory]
+      - [ 0x292B0, c, system/flags]
+      - [ 0x29310, c, game/gameStart]
+      - [ 0x29560, c, game/initialize]
+      - [ 0x31220, c, game/transition]
+      - [ 0x34CE0, c, game/load]
+      - [ 0x35190, c, game/game]
+      - [ 0x3EEF0, c, game/gameStatus]
+      - [ 0x40BD0, c, game/player]
+      - [ 0x49C20, c, game/level]
+      - [ 0x506C0, c, game/npc]
+      - [ 0x61370, c, game/animals]
+      - [ 0x77390, c, game/cutscenes]
+      - [ 0x87C20, c, game/evaluation]
+      - [ 0x87EB0, c, game/gameAudio]
+      - [ 0x88170, c, game/levelInteractions]
+      - [ 0x8E0E0, c, game/overlayScreens]
+      - [ 0xAAC50, c, game/items]
+      - [ 0xB3020, c, game/time]
+      - [ 0xB3940, c, game/tv]
+      - [ 0xB4A00, c, game/fieldObjects]
+      - [ 0xB7760, c, game/weather]
+      - [ 0xB7B50, c, game/shop]
+      - [ 0xB97C0, c, game/title]
+      - [ 0xBC780, c, game/gameFile]
+      - [ 0xC8CA0, c, game/namingScreen]
+      # start of libraries
+      - [ 0xCC770, c, ../lib/nusys-1/src/sample/nunospak/nupakmenu]
+      - [ 0xCD4D0, c, ../lib/nusys-1/src/sample/nunospak/nupakmenuloadfont]
+      # nualstl
+      - [ 0xCD870, c, ../lib/nusys-1/src/nualstl/nuaustlinit]
+      - [ 0xCD900, c, ../lib/nusys-1/src/nualstl/nuaustlbankset]
+      - [ 0xCD9A0, c, ../lib/nusys-1/src/nualstl/nuaustlplayerinit]
+      - [ 0xCDA60, c, ../lib/nusys-1/src/nualstl/nuaustlseqplayersetdata]
+      - [ 0xCDAE0, c, ../lib/nusys-1/src/nualstl/nuaustlseqplayerplay]
+      - [ 0xCDB40, c, ../lib/nusys-1/src/nualstl/nuaustlsndplayerplay]
+      - [ 0xCDB80, c, ../lib/nusys-1/src/nualstl/nuauprenmifuncset]
+      - [ 0xCDBC0, c, ../lib/nusys-1/src/nualstl/nuauprenmiproc]
+      - [ 0xCDC20, c, ../lib/nusys-1/src/nualstl/nuaustlmgr]
+      # libmus
+      - [ 0xCE620, c, ../lib/libmus/src/player]
+      # libnaudio
+      - [ 0xD3600, c, ../lib/libultra/src/libnaudio/n_sl]
+      - [ 0xD3680, c, ../lib/libultra/src/libnaudio/n_synaddplayer]
+      - [ 0xD36D0, c, ../lib/libultra/src/libnaudio/n_synallocvoice]
+      - [ 0xD38B0, c, ../lib/libultra/src/libnaudio/n_syndelete]
+      - [ 0xD38C0, c, ../lib/libultra/src/libnaudio/n_synsetfxmix]
+      - [ 0xD3960, c, ../lib/libultra/src/libnaudio/n_synsetpan]
+      - [ 0xD39F0, c, ../lib/libultra/src/libnaudio/n_synsetpitch]
+      - [ 0xD3A80, c, ../lib/libultra/src/libnaudio/n_synsetvol]
+      - [ 0xD3B30, c, ../lib/libultra/src/libnaudio/n_synstartvoice]
+      - [ 0xD3BC0, c, ../lib/libultra/src/libnaudio/n_synstopvoice]
+      - [ 0xD3C40, c, ../lib/libultra/src/libnaudio/n_synthesizer]
+      - [ 0xD41A0, c, ../lib/libultra/src/libnaudio/n_auxbus]
+      - [ 0xD4240, c, ../lib/libultra/src/libnaudio/n_drvrNew]
+      - [ 0xD4760, c, ../lib/libultra/src/libnaudio/n_env]
+      - [ 0xD5130, c, ../lib/libultra/src/libnaudio/n_load]
+      - [ 0xD5850, c, ../lib/libultra/src/libnaudio/n_resample]
+      - [ 0xD5A30, c, ../lib/libultra/src/libnaudio/n_reverb]
+      - [ 0xD6420, c, ../lib/libultra/src/libnaudio/n_save]
+      - [ 0xD6470, c, ../lib/libultra/src/libnaudio/n_synallocfx]
+      - [ 0xD64C0, c, ../lib/libultra/src/libnaudio/n_mainbus]
+      # nusys
+      - [ 0xD6540, c, ../lib/nusys-1/src/nusys/nusched]
+      - [ 0xD6D10, c, ../lib/nusys-1/src/nusys/nugfxthread]
+      - [ 0xD6E60, c, ../lib/nusys-1/src/nusys/nugfxtaskmgr]
+      - [ 0xD7250, c, ../lib/nusys-1/src/nusys/nugfxfuncset]
+      - [ 0xD7290, c, ../lib/nusys-1/src/nusys/nugfxprenmifuncset]
+      - [ 0xD72D0, c, ../lib/nusys-1/src/nusys/nugfxswapcfbfuncset]
+      - [ 0xD7310, c, ../lib/nusys-1/src/nusys/nugfxswapcfb]
+      - [ 0xD7330, c, ../lib/nusys-1/src/nusys/nugfxtaskallendwait]
+      - [ 0xD7350, c, ../lib/nusys-1/src/nusys/nugfxretracewait]
+      - [ 0xD73D0, c, ../lib/nusys-1/src/nusys/nugfxsetcfb]
+      - [ 0xD7400, c, ../lib/nusys-1/src/nusys/nugfxdisplayoff]
+      - [ 0xD7430, c, ../lib/nusys-1/src/nusys/nugfxdisplayon]
+      - [ 0xD7440, c, ../lib/nusys-1/src/nusys/nucontmgr]
+      - [ 0xD7800, c, ../lib/nusys-1/src/nusys/nucontinit]
+      - [ 0xD7840, c, ../lib/nusys-1/src/nusys/nucontdatalock]
+      - [ 0xD78A0, c, ../lib/nusys-1/src/nusys/nucontdatareadwait]
+      - [ 0xD78D0, c, ../lib/nusys-1/src/nusys/nucontdatareadstart]
+      - [ 0xD7910, c, ../lib/nusys-1/src/nusys/nucontdatagetex]
+      - [ 0xD79A0, c, ../lib/nusys-1/src/nusys/nucontdatagetexall]
+      - [ 0xD7A50, c, ../lib/nusys-1/src/nusys/nucontqueryread]
+      - [ 0xD7AC0, c, ../lib/nusys-1/src/nusys/nucontpakmgr]
+      - [ 0xD7D10, c, ../lib/nusys-1/src/nusys/nucontpakopen]
+      - [ 0xD7DC0, c, ../lib/nusys-1/src/nusys/nucontpakgetfree]
+      - [ 0xD7E50, c, ../lib/nusys-1/src/nusys/nucontpakrepairid]
+      - [ 0xD7ED0, c, ../lib/nusys-1/src/nusys/nucontpakfileopenjis]
+      - [ 0xD7FF0, c, ../lib/nusys-1/src/nusys/nucontpakcodeset]
+      - [ 0xD8040, c, ../lib/nusys-1/src/nusys/nucontpakfilereadwrite]
+      - [ 0xD8100, c, ../lib/nusys-1/src/nusys/nucontpakfiledelete]
+      - [ 0xD81A0, c, ../lib/nusys-1/src/nusys/nucontpakfiledeletejis]
+      - [ 0xD82A0, c, ../lib/nusys-1/src/nusys/nucontpakfilestate]
+      - [ 0xD8330, c, ../lib/nusys-1/src/nusys/nucontpakfilenum]
+      - [ 0xD83D0, c, ../lib/nusys-1/src/nusys/nucontrmbmgr]
+      - [ 0xD89B0, c, ../lib/nusys-1/src/nusys/nupiinit]
+      - [ 0xD89E0, c, ../lib/nusys-1/src/nusys/nupireadrom]
+      - [ 0xD8B40, c, ../lib/nusys-1/src/nusys/nusimgr]
+      - [ 0xD8C80, c, ../lib/nusys-1/src/nusys/nusicallbackadd]
+      - [ 0xD8D00, c, ../lib/nusys-1/src/nusys/nusicallbackremove]
+      - [ 0xD8D80, c, ../lib/nusys-1/src/nusys/nucontpakjiston64]
+      # libultra
+      - [ 0xD9040, hasm, ../lib/libultra/src/gu/sqrtf]
+      - [ 0xD9050, c, ../lib/libultra/src/gu/cosf]
+      - [ 0xD91A0, c, ../lib/libultra/src/gu/lookat]
+      - [ 0xD98B0, c, ../lib/libultra/src/gu/mtxutil]
+      - [ 0xD9B30, c, ../lib/libultra/src/gu/ortho]
+      - [ 0xD9DB0, c, ../lib/libultra/src/gu/perspective]
+      - [ 0xDA130, c, ../lib/libultra/src/gu/rotaterpy]
+      - [ 0xDA450, c, ../lib/libultra/src/gu/scale]
+      - [ 0xDA530, c, ../lib/libultra/src/gu/sinf]
+      - [ 0xDA6D0, c, ../lib/libultra/src/gu/translate]
+      - [ 0xDA7A0, hasm, ../lib/libultra/src/os/invaldcache]
+      - [ 0xDA850, hasm, ../lib/libultra/src/os/unusedPadding] # FIXME
+      - [ 0xDA8B0, hasm, ../lib/libultra/src/os/setintmask]
+      - [ 0xDA950, hasm, ../lib/libultra/src/os/writebackdcache]
+      - [ 0xDA9D0, hasm, ../lib/libultra/src/os/writebackdcacheall]
+      - [ 0xDAA00, c, ../lib/libultra/src/os/createmesgqueue]
+      - [ 0xDAA30, c, ../lib/libultra/src/os/createthread]
+      - [ 0xDAB00, c, ../lib/libultra/src/os/recvmesg]
+      - [ 0xDAC30, c, ../lib/libultra/src/os/sendmesg]
+      - [ 0xDAD60, c, ../lib/libultra/src/os/setthreadpri]
+      - [ 0xDAE30, c, ../lib/libultra/src/os/startthread]
+      - [ 0xDAF50, c, ../lib/libultra/src/os/stopthread]
+      - [ 0xDB010, c, ../lib/libultra/src/os/thread]
+      - [ 0xDB050, c, ../lib/libultra/src/os/virtualtophysical]
+      - [ 0xDB0B0, c, ../lib/libultra/src/debug/assert]
+      - [ 0xDB0E0, c, ../lib/libultra/src/audio/sl]
+      - [ 0xDB190, c, ../lib/libultra/src/audio/heapinit]
+      - [ 0xDB1D0, c, ../lib/libultra/src/audio/heapalloc]
+      - [ 0xDB220, c, ../lib/libultra/src/audio/copy]
+      - [ 0xDB260, c, ../lib/libultra/src/audio/syndelete]
+      - [ 0xDB270, c, ../lib/libultra/src/io/aigetlen]
+      - [ 0xDB280, c, ../lib/libultra/src/io/aigetstat]
+      - [ 0xDB290, c, ../lib/libultra/src/io/aisetnextbuf]
+      - [ 0xDB330, c, ../lib/libultra/src/io/spsetpc]
+      - [ 0xDB360, c, ../lib/libultra/src/io/sptask]
+      - [ 0xDB5A0, c, ../lib/libultra/src/io/sptaskyield]
+      - [ 0xDB5C0, c, ../lib/libultra/src/io/sptaskyielded]
+      - [ 0xDB610, c, ../lib/libultra/src/io/vigetcurrframebuf]
+      - [ 0xDB650, c, ../lib/libultra/src/io/vigetnextframebuf]
+      - [ 0xDB690, c, ../lib/libultra/src/io/visetevent]
+      - [ 0xDB6F0, c, ../lib/libultra/src/io/visetmode]
+      - [ 0xDB740, c, ../lib/libultra/src/io/visetyscale]
+      - [ 0xDB790, c, ../lib/libultra/src/io/viswapbuf]
+      - [ 0xDB7E0, c, ../lib/libultra/src/io/viblack]
+      - [ 0xDB840, c, ../lib/libultra/src/io/contquery]
+      - [ 0xDB8E0, c, ../lib/libultra/src/io/controller]
+      - [ 0xDBBF0, c, ../lib/libultra/src/io/epidma]
+      - [ 0xDBC90, c, ../lib/libultra/src/io/epilinkhandle]
+      - [ 0xDBCE0, hasm, ../lib/libultra/src/libc/bcopy]
+      - [ 0xDC000, hasm, ../lib/libultra/src/libc/bzero]
+      - [ 0xDC0A0, c, ../lib/libultra/src/libc/syncPrintf]
+      - [ 0xDC3F0, c, ../lib/libultra/src/audio/drvrnew]
+      - [ 0xDCC20, c, ../lib/libultra/src/audio/env]
+      - [ 0xDD8D0, c, ../lib/libultra/src/audio/reverb]
+      - [ 0xDE470, c, ../lib/libultra/src/audio/save]
+      - [ 0xDE540, c, ../lib/libultra/src/audio/synthesizer]
+      - [ 0xDEB80, c, ../lib/libultra/src/io/aisetfreq]
+      - [ 0xDECA0, c, ../lib/libultra/src/io/cartrominit]
+      - [ 0xDEE20, c, ../lib/libultra/src/io/contreaddata]
+      - [ 0xDF000, c, ../lib/libultra/src/io/motor]
+      - [ 0xDF390, c, ../lib/libultra/src/io/pfsallocatefile]
+      - [ 0xDF7C0, c, ../lib/libultra/src/io/pfsdeletefile]
+      - [ 0xDF9E0, c, ../lib/libultra/src/io/pfsfilestate]
+      - [ 0xDFB70, c, ../lib/libultra/src/io/pfsfreeblocks]
+      - [ 0xDFC80, c, ../lib/libultra/src/io/pfsinitpak]
+      - [ 0xDFF50, c, ../lib/libultra/src/io/pfsnumfiles]
+      - [ 0xE0050, c, ../lib/libultra/src/io/pfsreadwritefile]
+      - [ 0xE0490, c, ../lib/libultra/src/io/pfsrepairid]
+      - [ 0xE04F0, c, ../lib/libultra/src/io/pfssearchfile]
+      - [ 0xE0690, c, ../lib/libultra/src/io/pfsselectbank]
+      - [ 0xE0700, c, ../lib/libultra/src/io/pimgr]
+      - [ 0xE09B0, c, ../lib/libultra/src/io/pirawdma]
+      - [ 0xE0A80, c, ../lib/libultra/src/io/sirawdma]
+      - [ 0xE0B30, c, ../lib/libultra/src/io/sprawdma]
+      - [ 0xE0BC0, c, ../lib/libultra/src/io/vimgr]
+      - [ 0xE0F00, c, ../lib/libultra/src/io/vitbl]
+      - [ 0xE0F00, c, ../lib/libultra/src/io/visetspecial]
+      - [ 0xE1070, c, ../lib/libultra/src/io/viswapcontext]
+      - [ 0xE1380, hasm, ../lib/libultra/src/os/exceptasm]
+      - [ 0xE2170, c, ../lib/libultra/src/os/initialize]
+      - [ 0xE2570, hasm, ../lib/libultra/src/os/interrupt]
+      - [ 0xE2600, c, ../lib/libultra/src/os/seteventmesg]
+      - [ 0xE26B0, hasm, ../lib/libultra/src/os/getcause]
+      - [ 0xE26C0, hasm, ../lib/libultra/src/os/getcount]
+      - [ 0xE26D0, hasm, ../lib/libultra/src/os/getsr]
+      - [ 0xE26E0, hasm, ../lib/libultra/src/os/invalicache]
+      - [ 0xE2760, hasm, ../lib/libultra/src/os/probetlb]
+      - [ 0xE2820, hasm, ../lib/libultra/src/os/setfpcsr]
+      - [ 0xE2830, hasm, ../lib/libultra/src/os/setsr]
+      - [ 0xE2840, hasm, ../lib/libultra/src/os/unmaptlball]
+      - [ 0xE2890, hasm, ../lib/libultra/src/os/maptlbrdb]
+      - [ 0xE28F0, c, ../lib/libultra/src/os/destroythread]
+      - [ 0xE29C0, c, ../lib/libultra/src/os/getthreadpri]
+      - [ 0xE29E0, c, ../lib/libultra/src/os/gettime]
+      - [ 0xE2A70, c, ../lib/libultra/src/os/jammesg]
+      - [ 0xE2BB0, c, ../lib/libultra/src/debug/kdebugserver]
+      - [ 0xE2E70, c, ../lib/libultra/src/os/settimer]
+      - [ 0xE2F10, c, ../lib/libultra/src/os/timerintr]
+      - [ 0xE32B0, c, ../lib/libultra/src/os/initrdb]
+      - [ 0xE3330, c, ../lib/libultra/src/os/rdbsend]
+      - [ 0xE3550, c, ../lib/libultra/src/host/readhost]
+      - [ 0xE3620, c, ../lib/libultra/src/audio/load]
+      - [ 0xE4130, c, ../lib/libultra/src/audio/auxbus]
+      - [ 0xE4240, c, ../lib/libultra/src/audio/filter]
+      - [ 0xE4260, c, ../lib/libultra/src/audio/mainbus]
+      - [ 0xE43D0, c, ../lib/libultra/src/audio/resample]
+      - [ 0xE4680, c, ../lib/libultra/src/audio/synallocfx]
+      - [ 0xE4720, c, ../lib/libultra/src/io/ai]
+      - [ 0xE4740, c, ../lib/libultra/src/io/sp]
+      - [ 0xE4760, c, ../lib/libultra/src/io/spgetstat]
+      - [ 0xE4770, c, ../lib/libultra/src/io/spsetstat]
+      - [ 0xE4780, c, ../lib/libultra/src/io/vi]
+      - [ 0xE4890, c, ../lib/libultra/src/io/vigetcurrcontext]
+      - [ 0xE48A0, c, ../lib/libultra/src/io/siacs]
+      - [ 0xE4990, c, ../lib/libultra/src/vimodes/vimodentsclan1]
+      - [ 0xE4990, c, ../lib/libultra/src/vimodes/vimodepallan1]
+      - [ 0xE4990, c, ../lib/libultra/src/vimodes/vimodempallan1]
+      - [ 0xE4990, c, ../lib/libultra/src/io/pigetcmdq]
+      - [ 0xE49B0, c, ../lib/libultra/src/io/piacs]
+      - [ 0xE4AA0, c, ../lib/libultra/src/rmon/rmonsio]
+      - [ 0xE4C50, hasm, ../lib/libultra/src/libc/bcmp]
+      - [ 0xE4D60, c, ../lib/libultra/src/libc/xprintf]
+      - [ 0xE5790, c, ../lib/libultra/src/io/contpfs]
+      - [ 0xE6220, c, ../lib/libultra/src/io/contramread]
+      - [ 0xE6420, c, ../lib/libultra/src/io/contramwrite]
+      - [ 0xE6640, c, ../lib/libultra/src/io/crc]
+      - [ 0xE6730, c, ../lib/libultra/src/io/devmgr]
+      - [ 0xE6AF0, c, ../lib/libultra/src/io/epirawdma]
+      - [ 0xE6CE0, c, ../lib/libultra/src/io/epirawread]
+      - [ 0xE6E50, c, ../lib/libultra/src/io/epirawwrite]
+      - [ 0xE6FC0, c, ../lib/libultra/src/io/pfschecker]
+      - [ 0xE76E0, c, ../lib/libultra/src/io/pfsgetstatus]
+      - [ 0xE78F0, c, ../lib/libultra/src/io/sirawread]
+      - [ 0xE7940, c, ../lib/libultra/src/io/sirawwrite]
+      - [ 0xE7990, hasm, ../lib/libultra/src/os/setcompare]
+      - [ 0xE79A0, c, ../lib/libultra/src/os/resetglobalintmask]
+      - [ 0xE79F0, c, ../lib/libultra/src/os/setglobalintmask]
+      - [ 0xE7A30, c, ../lib/libultra/src/os/yieldthread]
+      - [ 0xE7A80, c, ../lib/libultra/src/io/si]
+      - [ 0xE7AA0, c, ../lib/libultra/src/io/pfsisplug]
+      - [ 0xE7D80, c, ../lib/libultra/src/rmon/rmoncmds]
+      - [ 0xE7E10, c, ../lib/libultra/src/rmon/rmonmem]
+      - [ 0xE8580, c, ../lib/libultra/src/rmon/rmonmisc]
+      - [ 0xE86D0, c, ../lib/libultra/src/rmon/rmonregs]
+      - [ 0xE9190, c, ../lib/libultra/src/rmon/rmontask]
+      - [ 0xE9A60, c, ../lib/libultra/src/rmon/rmonmain]
+      - [ 0xE9E00, c, ../lib/libultra/src/libc/string]
+      - [ 0xE9E90, c, ../lib/libultra/src/libc/xlitob]
+      - [ 0xEA0E0, c, ../lib/libultra/src/libc/xldtob]
+      - [ 0xEAB60, c, ../lib/libultra/src/io/sprawread]
+      - [ 0xEABB0, c, ../lib/libultra/src/io/sprawwrite]
+      - [ 0xEAC00, c, ../lib/libultra/src/os/getactivequeue]
+      - [ 0xEAC10, hasm, ../lib/libultra/src/rmon/rmonrcp]
+      - [ 0xEACB0, c, ../lib/libultra/src/rmon/rmonbrk]
+      - [ 0xEB650, c, ../lib/libultra/src/libc/ldiv]
+      # libkmc
+      - [ 0xEB810, c, ../lib/libkmc/src/rand]
+      - [ 0xEB850, hasm, ../lib/libkmc/src/mmuldi3]
+      # end of functions/text, start of data
+      - [ 0xEBC20, textbin, ../lib/ucode/rspboot]
+      - [ 0xEBCF0, textbin, ../lib/ucode/n_aspMain]
+      - [ 0xEC950, textbin, ../lib/ucode/gspF3DEX2.fifo]
+      - [ 0xECAB0, .data, system/unknownData]
+      - [ 0xECAC0, .data, system/unknownData2]
+      - [ 0xEDD00, .data, system/staticGfx]
+      - [ 0xEDE80, .data, system/paddingData]
+      - [ 0xEE110, .data, system/map]
+      - [ 0xEE7B0, .data, system/numberSprites]
+      - [ 0xEE7D0, .data, system/cutscene]
+      - [ 0xEE980, .data, data/fieldTileMaps/fieldTiles]
+      - [ 0xEEF20, .data, game/game]
+      - [ 0xEF050, .data, game/player]
+      - [ 0xEF680, .data, game/level]
+      - [ 0xEFD00, .data, game/npc]
+      - [ 0xEFDC0, .data, game/animals]
+      - [ 0xEFEF0, .data, game/cutscenes]
+      - [ 0xF0250, .data, data/fieldTileMaps/cutsceneFieldTiles]
+      - [ 0xF16F0, .data, game/gameAudio]
+      - [ 0xF2080, .data, game/overlayScreens]
+      - [ 0xF2580, .data, game/items]
+      - [ 0xF3B00, .data, game/fieldObjects]
+      - [ 0xF3F50, .data, game/weather]
+      - [ 0xF3F70, .data, game/shop]
+      - [ 0xF4B40, .data, game/gameFile]
+
+      - name: data/animationScripts/animationScripts
+        type: animationScripts
+        start: 0xF4B50
+        subsegments:
+          - { start: 0xF4B50, type: animationScriptData, name: data/animationScripts/player }
+          - { start: 0xF50D0, type: animationScriptData, name: data/animationScripts/maria }
+          - { start: 0xF51D0, type: animationScriptData, name: data/animationScripts/popuri }
+          - { start: 0xF52F0, type: animationScriptData, name: data/animationScripts/elli }
+          - { start: 0xF53F0, type: animationScriptData, name: data/animationScripts/ann }
+          - { start: 0xF5500, type: animationScriptData, name: data/animationScripts/karen }
+          - { start: 0xF55F4, type: animationScriptData, name: data/animationScripts/gray }
+          - { start: 0xF5660, type: animationScriptData, name: data/animationScripts/jeff }
+          - { start: 0xF56C8, type: animationScriptData, name: data/animationScripts/cliff }
+          - { start: 0xF5718, type: animationScriptData, name: data/animationScripts/kai }
+          - { start: 0xF5778, type: animationScriptData, name: data/animationScripts/rick }
+          - { start: 0xF57A8, type: animationScriptData, name: data/animationScripts/masterCarpenter }
+          - { start: 0xF57CC, type: animationScriptData, name: data/animationScripts/shadySalesman }
+          - { start: 0xF57FC, type: animationScriptData, name: data/animationScripts/duke }
+          - { start: 0xF5820, type: animationScriptData, name: data/animationScripts/harvestSprite }
+          - { start: 0xF5870, type: animationScriptData, name: data/animationScripts/princess }
+          - { start: 0xF5890, type: animationScriptData, name: data/animationScripts/may }
+          - { start: 0xF58BC, type: animationScriptData, name: data/animationScripts/touristCoupleMan }
+          - { start: 0xF58E0, type: animationScriptData, name: data/animationScripts/touristCoupleWoman }
+          - { start: 0xF5900, type: animationScriptData, name: data/animationScripts/oldMan }
+          - { start: 0xF5920, type: animationScriptData, name: data/animationScripts/oldWoman }
+          - { start: 0xF5940, type: animationScriptData, name: data/animationScripts/festivalGirl1 }
+          - { start: 0xF5960, type: animationScriptData, name: data/animationScripts/festivalGirl2 }
+          - { start: 0xF5980, type: animationScriptData, name: data/animationScripts/festivalGirl3 }
+          - { start: 0xF59A0, type: animationScriptData, name: data/animationScripts/midwife }
+          - { start: 0xF59E4, type: animationScriptData, name: data/animationScripts/mayorWife }
+          - { start: 0xF5A0C, type: animationScriptData, name: data/animationScripts/lillia }
+          - { start: 0xF5A34, type: animationScriptData, name: data/animationScripts/mariaHarrisBaby }
+          - { start: 0xF5A54, type: animationScriptData, name: data/animationScripts/popuriGrayBaby }
+          - { start: 0xF5A74, type: animationScriptData, name: data/animationScripts/elliJeffBaby }
+          - { start: 0xF5A94, type: animationScriptData, name: data/animationScripts/annCliffBaby }
+          - { start: 0xF5AB4, type: animationScriptData, name: data/animationScripts/karenKaiBaby }
+          - { start: 0xF5AD4, type: animationScriptData, name: data/animationScripts/baby }
+          - { start: 0xF5BF4, type: animationScriptData, name: data/animationScripts/pastor }
+          - { start: 0xF5C1C, type: animationScriptData, name: data/animationScripts/sasha }
+          - { start: 0xF5C40, type: animationScriptData, name: data/animationScripts/potionShopDealer }
+          - { start: 0xF5C6C, type: animationScriptData, name: data/animationScripts/harris }
+          - { start: 0xF5CC4, type: animationScriptData, name: data/animationScripts/mayor }
+          - { start: 0xF5CF8, type: animationScriptData, name: data/animationScripts/doug }
+          - { start: 0xF5D1C, type: animationScriptData, name: data/animationScripts/gotz }
+          - { start: 0xF5D40, type: animationScriptData, name: data/animationScripts/shipper }
+          - { start: 0xF5D74, type: animationScriptData, name: data/animationScripts/basil }
+          - { start: 0xF5DA0, type: animationScriptData, name: data/animationScripts/kent }
+          - { start: 0xF5E00, type: animationScriptData, name: data/animationScripts/stu }
+          - { start: 0xF5E5C, type: animationScriptData, name: data/animationScripts/assistantCarpenter }
+          - { start: 0xF5ECC, type: animationScriptData, name: data/animationScripts/entomologist }
+          - { start: 0xF5EF0, type: animationScriptData, name: data/animationScripts/greg }
+          - { start: 0xF5F24, type: animationScriptData, name: data/animationScripts/photographer }
+          - { start: 0xF5F54, type: animationScriptData, name: data/animationScripts/saibara }
+          - { start: 0xF5F84, type: animationScriptData, name: data/animationScripts/ellen }
+          - { start: 0xF5F98, type: animationScriptData, name: data/animationScripts/barley }
+          - { start: 0xF5FB8, type: animationScriptData, name: data/animationScripts/sydney }
+          - { start: 0xF5FF8, type: animationScriptData, name: data/animationScripts/spiritFestivalOcarinaPerformer }
+          - { start: 0xF6004, type: animationScriptData, name: data/animationScripts/gourmetJudge }
+          - { start: 0xF6028, type: animationScriptData, name: data/animationScripts/mrsMana }
+          - { start: 0xF6048, type: animationScriptData, name: data/animationScripts/mrsManaSon }
+          - { start: 0xF6068, type: animationScriptData, name: data/animationScripts/kappa }
+          - { start: 0xF606C, type: animationScriptData, name: data/animationScripts/harvestGoddess }
+          - { start: 0xF6090, type: animationScriptData, name: data/animationScripts/dog }
+          - { start: 0xF6240, type: animationScriptData, name: data/animationScripts/dogVillage }
+          - { start: 0xF6330, type: animationScriptData, name: data/animationScripts/chicken }
+          - { start: 0xF63A0, type: animationScriptData, name: data/animationScripts/chick }
+          - { start: 0xF63D0, type: animationScriptData, name: data/animationScripts/cow }
+          - { start: 0xF6650, type: animationScriptData, name: data/animationScripts/calf }
+          - { start: 0xF6710, type: animationScriptData, name: data/animationScripts/youngCow }
+          - { start: 0xF67D0, type: animationScriptData, name: data/animationScripts/cowIndoors }
+          - { start: 0xF68A0, type: animationScriptData, name: data/animationScripts/sheep }
+          - { start: 0xF69A0, type: animationScriptData, name: data/animationScripts/lamb }
+          - { start: 0xF6A00, type: animationScriptData, name: data/animationScripts/horseGrown }
+          - { start: 0xF6AB0, type: animationScriptData, name: data/animationScripts/horsePony }
+          - { start: 0xF6B20, type: animationScriptData, name: data/animationScripts/cat }
+          - { start: 0xF6BA0, type: animationScriptData, name: data/animationScripts/horseUnbridled }
+          - { start: 0xF6BC0, type: animationScriptData, name: data/animationScripts/fox }
+          - { start: 0xF6C00, type: animationScriptData, name: data/animationScripts/squirrel }
+          - { start: 0xF6C40, type: animationScriptData, name: data/animationScripts/monkey }
+          - { start: 0xF6C90, type: animationScriptData, name: data/animationScripts/hawk }
+          - { start: 0xF6CD0, type: animationScriptData, name: data/animationScripts/bunny }
+          - { start: 0xF6D10, type: animationScriptData, name: data/animationScripts/mouse }
+          - { start: 0xF6D34, type: animationScriptData, name: data/animationScripts/bird }
+          - { start: 0xF6D64, type: animationScriptData, name: data/animationScripts/crab }
+          - { start: 0xF6D84, type: animationScriptData, name: data/animationScripts/snake }
+          - { start: 0xF6DA4, type: animationScriptData, name: data/animationScripts/whiteButterfly }
+          - { start: 0xF6DB4, type: animationScriptData, name: data/animationScripts/ladybug }
+          - { start: 0xF6DBC, type: animationScriptData, name: data/animationScripts/cicada }
+          - { start: 0xF6DC4, type: animationScriptData, name: data/animationScripts/hornedBeetle }
+          - { start: 0xF6DD4, type: animationScriptData, name: data/animationScripts/stagBeetle }
+          - { start: 0xF6DE4, type: animationScriptData, name: data/animationScripts/dragonfly }
+          - { start: 0xF6DEC, type: animationScriptData, name: data/animationScripts/cricket }
+          - { start: 0xF6DF4, type: animationScriptData, name: data/animationScripts/homeItems }
+          - { start: 0xF6DFC, type: animationScriptData, name: data/animationScripts/holdableItems1 }
+          - { start: 0xF6E10, type: animationScriptData, name: data/animationScripts/shopItems }
+          - { start: 0xF7010, type: animationScriptData, name: data/animationScripts/holdableItems2 }
+          - { start: 0xF70A0, type: animationScriptData, name: data/animationScripts/tools }
+          - { start: 0xF7100, type: animationScriptData, name: data/animationScripts/holdableItems3 }
+          - { start: 0xF7118, type: animationScriptData, name: data/animationScripts/characterAvatars, extract: false }
+
+      - [ 0xF71B0, .data, data/audio/sfx]
+      - [ 0xF7A80, .data, game/namingScreen]
+      - [ 0xF7BF0, .data, ../lib/nusys-1/src/sample/nunospak/nupakmenu]
+      - [ 0xF7C20, .data, ../lib/nusys-1/src/sample/nunospak/nupakmenuloadfont]
+      - [ 0xF7C50, .data, ../lib/nusys-1/src/nualstl/nuaustlinit]
+      - [ 0xF7CA0, .data, ../lib/nusys-1/src/nualstl/nuaustlmgr]
+      - [ 0xF7CC0, .data, ../lib/libmus/src/player]
+      - [ 0xF7D70, .data, ../lib/libultra/src/libnaudio/n_sl]
+      - [ 0xF7D80, .data, ../lib/libultra/src/libnaudio/n_drvrNew]
+      - [ 0xF7F10, .data, ../lib/libultra/src/libnaudio/n_env]
+      - [ 0xF8010, .data, ../lib/libultra/src/libnaudio/n_reverb]
+      - [ 0xF8020, .data, ../lib/nusys-1/src/nusys/nusched]
+      - [ 0xF8030, .data, ../lib/nusys-1/src/nusys/nugfxthread]
+      - [ 0xF8040, .data, ../lib/nusys-1/src/nusys/nugfxtaskmgr]
+      - [ 0xF8050, .data, ../lib/nusys-1/src/nusys/nucontmgr]
+      - [ 0xF8060, .data, ../lib/nusys-1/src/nusys/nucontdatareadstart]
+      - [ 0xF8070, .data, ../lib/nusys-1/src/nusys/nucontpakmgr]
+      - [ 0xF8080, .data, ../lib/nusys-1/src/nusys/nucontrmbmgr]
+      - [ 0xF8090, .data, ../lib/nusys-1/src/nusys/nucontpakjiston64]
+      - [ 0xF80D0, .data, ../lib/libultra/src/gu/rotaterpy]
+      - [ 0xF80E0, .data, ../lib/libultra/src/os/thread]
+      - [ 0xF8100, .data, ../lib/libultra/src/audio/sl]
+      - [ 0xF8110, .data, ../lib/libultra/src/io/aisetnextbuf]
+      - [ 0xF8120, .data, ../lib/libultra/src/io/controller]
+      - [ 0xF8130, .data, ../lib/libultra/src/libc/syncPrintf]
+      - [ 0xF8140, .data, ../lib/libultra/src/audio/drvrnew]
+      - [ 0xF82D0, .data, ../lib/libultra/src/audio/env]
+      - [ 0xF83D0, .data, ../lib/libultra/src/audio/reverb]
+      - [ 0xF83F0, .data, ../lib/libultra/src/io/cartrominit]
+      - [ 0xF8400, .data, ../lib/libultra/src/io/pimgr]
+      - [ 0xF8430, .data, ../lib/libultra/src/io/vimgr]
+      - [ 0xF8450, .data, ../lib/libultra/src/io/vitbl]
+      - [ 0xF95D0, .data, ../lib/libultra/src/os/exceptasm]
+      - [ 0xF9610, .data, ../lib/libultra/src/os/initialize]
+      - [ 0xF9630, .data, ../lib/libultra/src/os/seteventmesg]
+      - [ 0xF9640, .data, ../lib/libultra/src/debug/kdebugserver]
+      - [ 0xF9650, .data, ../lib/libultra/src/os/timerintr]
+      - [ 0xF9660, .data, ../lib/libultra/src/os/rdbsend]
+      - [ 0xF9670, .data, ../lib/libultra/src/host/readhost]
+      - [ 0xF9680, .data, ../lib/libultra/src/io/vi]
+      - [ 0xF96F0, .data, ../lib/libultra/src/io/siacs]
+      - [ 0xF9700, .data, ../lib/libultra/src/vimodes/vimodentsclan1]
+      - [ 0xF9750, .data, ../lib/libultra/src/vimodes/vimodepallan1]
+      - [ 0xF97A0, .data, ../lib/libultra/src/vimodes/vimodempallan1]
+      - [ 0xF97F0, .data, ../lib/libultra/src/io/piacs]
+      - [ 0xF9800, .data, ../lib/libultra/src/libc/xprintf]
+      - [ 0xF9850, .data, ../lib/libultra/src/io/contpfs]
+      - [ 0xF9860, .data, ../lib/libultra/src/io/contramread]
+      - [ 0xF9870, .data, ../lib/libultra/src/rmon/rmoncmds]
+      - [ 0xF9950, .data, ../lib/libultra/src/rmon/rmonmain]
+      - [ 0xF9960, .data, ../lib/libultra/src/libc/xlitob]
+      - [ 0xF9990, databin, ../lib/ucode/n_aspMain]
+      - [ 0xF9C40, databin, ../lib/ucode/gspF3DEX2.fifo]
+      # game rodata
+      - [ 0xFA060, .rodata, system/graphic]
+      - [ 0xFA0C0, .rodata, system/sprite]
+      - [ 0xFA168, .rodata, system/map]
+      - [ 0xFA1E0, .rodata, system/mapController]
+      - [ 0xFA200, .rodata, system/audio]
+      - [ 0xFA210, .rodata, system/message]
+      - [ 0xFA2E0, .rodata, system/dialogue]
+      - [ 0xFA350, .rodata, game/game]
+      - [ 0xFA700, .rodata, game/gameStatus]
+      - [ 0xFA7F0, .rodata, game/player]
+      - [ 0xFAB10, .rodata, game/level]
+      - [ 0xFB410, .rodata, game/npc]
+      - [ 0xFB720, .rodata, game/animals]
+      - [ 0xFC2C0, .rodata, game/cutscenes]
+      - [ 0xFC808, .rodata, game/levelInteractions]
+      - [ 0xFD090, .rodata, game/overlayScreens]
+      - [ 0xFD6B0, .rodata, game/items]
+      - [ 0xFDB60, .rodata, game/tv]
+      - [ 0xFDC58, .rodata, game/fieldObjects]
+      - [ 0xFE838, .rodata, game/weather]
+      - [ 0xFE860, .rodata, game/shop]
+      - [ 0xFEA58, .rodata, game/title]
+      - [ 0xFEA90, .rodata, game/gameFile]
+      - [ 0xFEBF0, .rodata, game/namingScreen]
+      # library rodata
+      - [ 0xFEC40, .rodata, ../lib/nusys-1/src/sample/nunospak/nupakmenu]
+      - [ 0xFED00, .rodata, ../lib/libmus/src/player]
+      - [ 0xFEDE0, .rodata, ../lib/libultra/src/libnaudio/n_synthesizer]
+      - [ 0xFEE00, .rodata, ../lib/libultra/src/libnaudio/n_drvrNew]
+      - [ 0xFEE30, .rodata, ../lib/libultra/src/libnaudio/n_env]
+      - [ 0xFEEA0, .rodata, ../lib/libultra/src/libnaudio/n_resample]
+      - [ 0xFEEB0, .rodata, ../lib/libultra/src/libnaudio/n_reverb]
+      - [ 0xFEEF0, .rodata, ../lib/nusys-1/src/nusys/nucontpakmgr]
+      - [ 0xFEF10, .rodata, ../lib/libultra/src/gu/cosf]
+      - [ 0xFEF70, .rodata, ../lib/libultra/src/gu/lookat]
+      - [ 0xFEF90, .rodata, ../lib/libultra/src/gu/perspective]
+      - [ 0xFEFD0, .rodata, ../lib/libultra/src/gu/sinf]
+      - [ 0xFF030, .rodata, ../lib/libultra/src/os/setintmask]
+      - [ 0xFF0B0, .rodata, ../lib/libultra/src/debug/assert]
+      - [ 0xFF0D0, .rodata, ../lib/libultra/src/audio/drvrnew]
+      - [ 0xFF110, .rodata, ../lib/libultra/src/audio/env]
+      - [ 0xFF200, .rodata, ../lib/libultra/src/audio/reverb]
+      - [ 0xFF250, .rodata, ../lib/libultra/src/audio/synthesizer]
+      - [ 0xFF270, .rodata, ../lib/libultra/src/io/aisetfreq]
+      - [ 0xFF280, .rodata, ../lib/libultra/src/io/viswapcontext]
+      - [ 0xFF290, .rodata, ../lib/libultra/src/os/exceptasm]
+      - [ 0xFF300, hasm, ../lib/libultra/src/gu/libm_vals]
+      - [ 0xFF300, .rodata, ../lib/libultra/src/gu/libm_vals]
+      - [ 0xFF310, .rodata, ../lib/libultra/src/audio/resample]
+      - [ 0xFF340, .rodata, ../lib/libultra/src/libc/xprintf]
+      - [ 0xFF4B8, .rodata, ../lib/libultra/src/io/devmgr]
+      - [ 0xFF4D8, .rodata, ../lib/libultra/src/rmon/rmonmem]
+      - [ 0xFF4F0, .rodata, ../lib/libultra/src/libc/xldtob]
+      - [ 0xFF560, .rodata, ../lib/libultra/src/rmon/rmonbrk]
+      # Static BSS
+      - { start: 0xFF5C0, type: .bss, vram: 0x801241C0, name: ../lib/nusys-1/src/nusys/nuboot }
+      - { start: 0xFF5C0, type: .bss, vram: 0x80126520, name: system/graphic }
+      - { start: 0xFF5C0, type: .bss, vram: 0x80126560, name: game/levelInteractions }
+      - { start: 0xFF5C0, type: .bss, vram: 0x80126570, name: game/title }
+      - { start: 0xFF5C0, type: .bss, vram: 0x80126580, name: ../lib/nusys-1/src/nualstl/nuaustlmgr }
+      - { start: 0xFF5C0, type: .bss, vram: 0x80129430, name: ../lib/nusys-1/src/nusys/nusched }
+      - { start: 0xFF5C0, type: .bss, vram: 0x8012F430, name: ../lib/nusys-1/src/nusys/nugfxthread }
+      - { start: 0xFF5C0, type: .bss, vram: 0x80131600, name: ../lib/nusys-1/src/nusys/nugfxtaskmgr }
+      - { start: 0xFF5C0, type: .bss, vram: 0x801337E0, name: ../lib/nusys-1/src/nusys/nucontmgr }
+      - { start: 0xFF5C0, type: .bss, vram: 0x801337F0, name: ../lib/nusys-1/src/nusys/nupiinit }
+      - { start: 0xFF5C0, type: .bss, vram: 0x801338D0, name: ../lib/nusys-1/src/nusys/nusimgr }
+      - { start: 0xFF5C0, type: .bss, vram: 0x80135AA0, name: ../lib/libultra/src/io/sptask }
+      - { start: 0xFF5C0, type: .bss, vram: 0x80135AE0, name: ../lib/libultra/src/io/motor }
+      - { start: 0xFF5C0, type: .bss, vram: 0x80135BE0, name: ../lib/libultra/src/io/pimgr }
+      - { start: 0xFF5C0, type: .bss, vram: 0x801373A0, name: ../lib/libultra/src/io/vimgr }
+      - { start: 0xFF5C0, type: .bss, vram: 0x801385C0, name: ../lib/libultra/src/debug/kdebugserver }
+      - { start: 0xFF5C0, type: .bss, vram: 0x801385D0, name: ../lib/libultra/src/host/readhost }
+      - { start: 0xFF5C0, type: .bss, vram: 0x801385F0, name: ../lib/libultra/src/io/siacs }
+      - { start: 0xFF5C0, type: .bss, vram: 0x80138600, name: ../lib/libultra/src/io/piacs }
+      - { start: 0xFF5C0, type: .bss, vram: 0x80138610, name: ../lib/libultra/src/rmon/rmonsio }
+      - { start: 0xFF5C0, type: .bss, vram: 0x80138630, name: ../lib/libultra/src/rmon/rmonmisc }
+      - { start: 0xFF5C0, type: .bss, vram: 0x8013C840, name: ../lib/libultra/src/rmon/rmonregs }
+      - { start: 0xFF5C0, type: .bss, vram: 0x8013C860, name: ../lib/libultra/src/rmon/rmonmain }
+      - { start: 0xFF5C0, type: .bss, vram: 0x8013CCE0, name: ../lib/libultra/src/rmon/rmonbrk }
+      - { start: 0xFF5C0, type: .bss, vram: 0x8013CDF0, name: ../lib/libkmc/src/rand }
+      # Common BSS
+      - { start: 0xFF5C0, type: bss, vram: 0x8013CE00, name: commonBSS }
+      
+  - name: messageBoxBuffer
+    type: code
+    start: 0xFF5C0
+    bss_size: 0x2B00
+    vram: 0x80238800
+    subsegments:
+      - [ 0xFF5C0, c, buffers/messageBoxBuffer]
+      - { start: 0xFF5C0, type: .bss, vram: 0x80238800, name: buffers/messageBoxBuffer }
+
+  - name: dialogueIconSpriteBuffer
+    type: code
+    start: 0xFF5C0
+    bss_size: 0x1F00
+    vram: 0x8023B400
+    subsegments:
+      - [ 0xFF5C0, c, buffers/dialogueIconSpriteBuffer]
+      - { start: 0xFF5C0, type: .bss, vram: 0x8023B400, name: buffers/dialogueIconSpriteBuffer }
+
+  - name: characterAvatarsSpriteBuffer
+    type: code
+    start: 0xFF5C0
+    bss_size: 0x3800
+    vram: 0x8023D300
+    subsegments:
+      - [ 0xFF5C0, c, buffers/characterAvatarsSpriteBuffer]
+      - { start: 0xFF5C0, type: .bss, vram: 0x8023D300, name: buffers/characterAvatarsSpriteBuffer }
+
+  - name: shadowSpriteBuffer
+    type: code
+    start: 0xFF5C0
+    bss_size: 0x800
+    vram: 0x80240300
+    subsegments:
+      - [ 0xFF5C0, c, buffers/shadowSpriteBuffer]
+      - { start: 0xFF5C0, type: .bss, vram: 0x80240300, name: buffers/shadowSpriteBuffer }
+
+  # shared with title screen dog
+  - name: playerSpriteBuffer
+    type: code
+    start: 0xFF5C0
+    bss_size: 0x13000
+    vram: 0x80240B00
+    subsegments:
+      - [ 0xFF5C0, c, buffers/playerSpriteBuffer]
+      - { start: 0xFF5C0, type: .bss, vram: 0x80240B00, name: buffers/playerSpriteBuffer }
+
+  - name: namingScreenBuffer
+    type: code
+    start: 0xFF5C0
+    bss_size: 0x1500
+    vram: 0x80253B00
+    subsegments:
+      - [ 0xFF5C0, c, buffers/namingScreenBuffer]
+      - { start: 0xFF5C0, type: .bss, vram: 0x80253B00, name: buffers/namingScreenBuffer }
+
+  # shared with title screen and naming screen sprites
+  - name: mapDataBuffer
+    type: code
+    start: 0xFF5C0
+    bss_size: 0x1A000
+    vram: 0x80255000
+    subsegments:
+      - [ 0xFF5C0, c, buffers/mapDataBuffer]
+      - { start: 0xFF5C0, type: .bss, vram: 0x80255000, name: buffers/mapDataBuffer }
+
+  - name: spriteBuffer
+    type: code
+    start: 0xFF5C0
+    bss_size: 0x73CC0
+    vram: 0x8026F000
+    subsegments:
+      - [ 0xFF5C0, c, buffers/spriteBuffer]
+      - { start: 0xFF5C0, type: .bss, vram: 0x8026F000, name: buffers/spriteBuffer }
+
+  - name: mapObjectBuffer
+    type: code
+    start: 0xFF5C0
+    bss_size: 0x10000
+    vram: 0x802E4000
+    subsegments:
+      - [ 0xFF5C0, c, buffers/mapObjectBuffer]
+      - { start: 0xFF5C0, type: .bss, vram: 0x802E4000, name: buffers/mapObjectBuffer }
+
+  - name: cutsceneBytecodeBuffer
+    type: code
+    start: 0xFF5C0
+    bss_size: 0xB000
+    vram: 0x802F4000
+    subsegments:
+      - [ 0xFF5C0, c, buffers/cutsceneBytecodeBuffer]
+      - { start: 0xFF5C0, type: .bss, vram: 0x802F4000, name: buffers/cutsceneBytecodeBuffer }
+
+  - name: fontBuffer
+    type: code
+    start: 0xFF5C0
+    bss_size: 0xB800
+    vram: 0x802FF000
+    subsegments:
+      - [ 0xFF5C0, c, buffers/fontBuffer]
+      - { start: 0xFF5C0, type: .bss, vram: 0x802FF000, name: buffers/fontBuffer }
+
+  - name: textBuffer
+    type: code
+    start: 0xFF5C0
+    bss_size: 0x800
+    vram: 0x8030A800
+    subsegments:
+      - [ 0xFF5C0, c, buffers/textBuffer]
+      - { start: 0xFF5C0, type: .bss, vram: 0x8030A800, name: buffers/textBuffer }
+
+  - name: messageBoxesBuffer
+    type: code
+    start: 0xFF5C0
+    bss_size: 0x1800
+    vram: 0x8030B000
+    subsegments:
+      - [ 0xFF5C0, c, buffers/messageBoxesBuffer]
+      - { start: 0xFF5C0, type: .bss, vram: 0x8030B000, name: buffers/messageBoxesBuffer }
+
+  - name: dialogueBytecodeBuffer
+    type: code
+    start: 0xFF5C0
+    bss_size: 0x800
+    vram: 0x8030C800
+    subsegments:
+      - [ 0xFF5C0, c, buffers/dialogueBytecodeBuffer]
+      - { start: 0xFF5C0, type: .bss, vram: 0x8030C800, name: buffers/dialogueBytecodeBuffer }
+
+  - name: sramBuffer
+    type: code
+    start: 0xFF5C0
+    bss_size: 0x1000
+    vram: 0x8030D000
+    subsegments:
+      - [ 0xFF5C0, c, buffers/sramBuffer]
+      - { start: 0xFF5C0, type: .bss, vram: 0x8030D000, name: buffers/sramBuffer }
+
+  - name: farmRankingsBuffer
+    type: code
+    start: 0xFF5C0
+    bss_size: 0x100
+    vram: 0x8030E000
+    subsegments:
+      - [ 0xFF5C0, c, buffers/farmRankingsBuffer]
+      - { start: 0xFF5C0, type: .bss, vram: 0x8030E000, name: buffers/farmRankingsBuffer }
+
+  # referenced in unused cutscene.c array
+  - name: unknownBuffer
+    type: code
+    start: 0xFF5C0
+    bss_size: 0x8000
+    vram: 0x8030F800
+    subsegments:
+      - [ 0xFF5C0, c, buffers/unknownBuffer]
+      - { start: 0xFF5C0, type: .bss, vram: 0x8030F800, name: buffers/unknownBuffer }
+
+  # 0x8038F800
+  # 0x803B5000
+  # 0x803DA800
+  - name: frameBuffer
+    type: code
+    start: 0xFF5C0
+    vram: 0x8038F800
+    bss_size: 0x70800
+    subsegments:
+      - [ 0xFF5C0, c, buffers/frameBuffer ]
+      - { start: 0xFF5C0, type: .bss, vram: 0x8038F800, name: buffers/frameBuffer }
+
+  # farm cutscenes: shipper, animal purchase
+  - name: farmBusiness
+    type: bin
+    dir: cutscenes
+    extract: false
+    start: 0xFF5C0
+
+  # farm visits
+  - name: farmVisits
+    type: bin
+    dir: cutscenes
+    extract: false
+    start: 0x100180
+
+  # marriage, births
+  - name: familyCutscenes
+    type: bin
+    dir: cutscenes
+    extract: false
+    start: 0x109920
+    
+  # cliff leaving, shady salesman, ann sprained ankle
+  - name: roadCutscenes
+    type: bin
+    dir: cutscenes
+    extract: false
+    start: 0x10EA80
+
+  # girl cutscenes
+  - name: mountainCutscenes
+    type: bin
+    dir: cutscenes
+    extract: false
+    start: 0x10F980
+
+  # ann cutscenes
+  - name: ranchCutscenes
+    type: bin
+    dir: cutscenes
+    extract: false
+    start: 0x115310
+
+  # karen cutscenes
+  - name: vineyardCutscenes
+    type: bin
+    dir: cutscenes
+    extract: false
+    start: 0x1175F0
+
+  # wedding, rival events, new year's, starry night festval
+  - name: cutsceneBank8
+    type: bin
+    dir: cutscenes
+    extract: false
+    start: 0x118D70
+    vram: 0x802F5000
+  
+  # maria cutscenes
+  - name: village2Cutscenes
+    type: bin
+    dir: cutscenes
+    extract: false
+    start: 0x120910
+
+  # karen cutscenes 2 (beach fireworks, heart events)
+  - name: beachCutscenes
+    type: bin
+    dir: cutscenes
+    extract: false
+    start: 0x123CE0
+
+  # sowing festival
+  - name: sowingFestival
+    type: bin
+    dir: cutscenes
+    extract: false
+    start: 0x125200
+
+  # horse race
+  - name: horseRace
+    type: bin
+    dir: cutscenes
+    extract: false
+    start: 0x129760
+
+  # flower festival
+  - name: flowerFestival
+    type: bin
+    dir: cutscenes
+    extract: false
+    start: 0x12FE90
+
+  # vegetable festival
+  - name: squareFireworks
+    type: bin
+    dir: cutscenes
+    extract: false
+    start: 0x134510
+
+  # square fireworks
+  - name: fireworksFestival
+    type: bin
+    dir: cutscenes
+    extract: false
+    start: 0x135F40
+
+  # firefly festival
+  - name: fireflyFestival
+    type: bin
+    dir: cutscenes
+    extract: false
+    start: 0x136930
+
+  # sea festival
+  - name: seaFestival
+    type: bin
+    dir: cutscenes
+    extract: false
+    start: 0x1385E0
+
+  # cow festival
+  - name: cowFestival
+    type: bin
+    dir: cutscenes
+    extract: false
+    start: 0x139840
+
+  # harvest festival
+  - name: harvestFestival
+    type: bin
+    dir: cutscenes
+    extract: false
+    start: 0x13AFC0
+
+  # egg festival
+  - name: eggFestival
+    type: bin
+    dir: cutscenes
+    extract: false
+    start: 0x13D470
+
+  # dog race
+  - name: dogRace
+    type: bin
+    dir: cutscenes
+    extract: false
+    start: 0x13FAC0
+
+  # spirit festival
+  - name: spiritFestival
+    type: bin
+    dir: cutscenes
+    extract: false
+    start: 0x144F60
+
+  # new year festival
+  - name: newYearFestival
+    type: bin
+    dir: cutscenes
+    extract: false
+    start: 0x1485B0
+
+  # intro/opening
+  - name: funeralIntro
+    type: bin
+    dir: cutscenes
+    extract: false
+    start: 0x149CC0
+
+  # evaluation
+  - name: evaluationEnding
+    type: bin
+    dir: cutscenes
+    extract: false
+    start: 0x14B8F0
+
+  # demo cutscenes
+  - name: demos
+    type: bin
+    dir: cutscenes
+    extract: false
+    start: 0x150120
+
+  # how to play
+  - name: howToPlay
+    type: bin
+    dir: cutscenes
+    extract: false
+    start: 0x1510B0
+    
+  # entity sprites
+  # ci8 spritesheet format:
+  #   sprite1:
+  #     header (4 bytes)
+  #     width (4 bytes)
+  #     height (4 bytes)
+  #     ci8 data
+  #   sprite2:
+  #   ...
+  #   palette index
+  #     offset1
+  #     offset2
+  #     ...
+  #     offset for end of palettes/start of spritesheet index
+  #     padding
+  #   palette1
+  #     header (4 bytes)
+  #     palette
+  #   palette2:
+  #   ...
+  #   animation index
+  #   animation metadata 1
+  #     header
+  #       header signature
+  #       total frames
+  #       unused
+  #     animation metadata 
+  #       sprite/bitmap counter for frame
+  #       frame duration
+  #       has audio
+  #     sprite/bitmap metadata
+  #     	sprite number (index into spritesheet index table)
+  #       unused 2 bit field
+  #       anchorX (s16)
+  #       anchorY (s16)
+  #      sprite/bitmap metadata 2
+  #       etc.
+  #   animation metadata 2
+  #   ...
+  #   sprite to palettes mapping table u8[] --> table[spritesheetEntry] --> paletteIndex
+  #   assets index
+  #     offset for spritesheet (i.e., 0)
+  #     offset for palette section
+  #     offset for animation section
+  #     sprite to palettes mapping array
+  #     end of assets/start of spritesheet index
+  #   spritesheet index
+  #     offset1
+  #     offset2
+  #     etc.
+
+  # character sprites
+  - name: playerTexture
+    type: bin
+    dir: assets/sprites/entitySprites/player
+    extract: false
+    start: 0x159330
+    vram: 0x80240B00
+
+  - name: playerAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/player
+    extract: false
+    start: 0x2D0660
+    
+  - name: playerSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/player
+    extract: false
+    start: 0x2D0680
+
+  - name: mariaTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/maria
+    extract: false
+    start: 0x2D15E0
+
+  - name: mariaAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/maria
+    extract: false
+    start: 0x3016C0
+    
+  - name: mariaSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/maria
+    extract: false
+    start: 0x3016E0
+
+  - name: popuriTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/popuri
+    extract: false
+    start: 0x301930
+
+  - name: popuriAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/popuri
+    extract: false
+    start: 0x339490
+    
+  - name: popuriSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/popuri
+    extract: false
+    start: 0x3394B0
+
+  - name: elliTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/elli
+    extract: false
+    start: 0x3396E0
+
+  - name: elliAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/elli
+    extract: false
+    start: 0x366970
+    
+  - name: elliSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/elli
+    extract: false
+    start: 0x366990
+
+  - name: annTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/ann
+    extract: false
+    start: 0x366BB0
+
+  - name: annAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/ann
+    extract: false
+    start: 0x39BC60
+    
+  - name: annSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/ann
+    extract: false
+    start: 0x39BC80
+
+  - name: karenTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/karen
+    extract: false
+    start: 0x39BEC0
+
+  - name: karenAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/karen
+    extract: false
+    start: 0x3D1860
+    
+  - name: karenSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/karen
+    extract: false
+    start: 0x3D1880
+
+  - name: babyTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/baby
+    extract: false
+    start: 0x3D1AE0
+
+  - name: babyAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/baby
+    extract: false
+    start: 0x3EE430
+    
+  - name: babySpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/baby
+    extract: false
+    start: 0x3EE450
+
+  - name: harrisTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/harris
+    extract: false
+    start: 0x3EE670
+
+  - name: harrisAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/harris
+    extract: false
+    start: 0x40D3F0
+    
+  - name: harrisSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/harris
+    extract: false
+    start: 0x40D410
+  
+  - name: grayTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/gray
+    extract: false
+    start: 0x40D550
+
+  - name: grayAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/gray
+    extract: false
+    start: 0x42A8D0
+    
+  - name: graySpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/gray
+    extract: false
+    start: 0x42A8F0
+
+  - name: jeffTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/jeff
+    extract: false
+    start: 0x42AA40
+
+  - name: jeffAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/jeff
+    extract: false
+    start: 0x443840
+    
+  - name: jeffSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/jeff
+    extract: false
+    start: 0x443860
+
+  - name: cliffTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/cliff
+    extract: false
+    start: 0x443990
+
+  - name: cliffAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/cliff
+    extract: false
+    start: 0x45D230
+    
+  - name: cliffSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/cliff
+    extract: false
+    start: 0x45D250
+
+  - name: kaiTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/kai
+    extract: false
+    start: 0x45D380
+
+  - name: kaiAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/kai
+    extract: false
+    start: 0x4772B0
+    
+  - name: kaiSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/kai
+    extract: false
+    start: 0x4772D0
+
+  - name: mayorTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/mayor
+    extract: false
+    start: 0x477410
+
+  - name: mayorAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/mayor
+    extract: false
+    start: 0x483D20
+    
+  - name: mayorSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/mayor
+    extract: false
+    start: 0x483D40
+
+  - name: mayorWifeTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/mayorWife
+    extract: false
+    start: 0x483E80
+
+  - name: mayorWifeAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/mayorWife
+    extract: false
+    start: 0x48B570
+    
+  - name: mayorWifeSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/mayorWife
+    extract: false
+    start: 0x48B590
+
+  - name: lilliaTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/lillia
+    extract: false
+    start: 0x48B620
+
+  - name: lilliaAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/lillia
+    extract: false
+    start: 0x4919B0
+    
+  - name: lilliaSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/lillia
+    extract: false
+    start: 0x4919D0
+
+  - name: basilTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/basil
+    extract: false
+    start: 0x491A40
+
+  - name: basilAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/basil
+    extract: false
+    start: 0x49EDA0
+    
+  - name: basilSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/basil
+    extract: false
+    start: 0x49EDC0
+
+  - name: ellenTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/ellen
+    extract: false
+    start: 0x49EEF0
+
+  - name: ellenAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/ellen
+    extract: false
+    start: 0x4A5D20
+    
+  - name: ellenSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/ellen
+    extract: false
+    start: 0x4A5D40
+
+  - name: dougTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/doug
+    extract: false
+    start: 0x4A5D70
+
+  - name: dougAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/doug
+    extract: false
+    start: 0x4B1260
+    
+  - name: dougSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/doug
+    extract: false
+    start: 0x4B1280
+
+  - name: gotzTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/gotz
+    extract: false
+    start: 0x4B13C0
+
+  - name: gotzAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/gotz
+    extract: false
+    start: 0x4BC390
+    
+  - name: gotzSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/gotz
+    extract: false
+    start: 0x4BC3B0
+
+  - name: sashaTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/sasha
+    extract: false
+    start: 0x4BC4A0
+
+  - name: sashaAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/sasha
+    extract: false
+    start: 0x4C3220
+    
+  - name: sashaSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/sasha
+    extract: false
+    start: 0x4C3240
+
+  - name: potionShopDealerTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/potionShopDealer
+    extract: false
+    start: 0x4C32C0
+
+  - name: potionShopDealerAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/potionShopDealer
+    extract: false
+    start: 0x4CD740
+    
+  - name: potionShopDealerSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/potionShopDealer
+    extract: false
+    start: 0x4CD760
+
+  - name: kentTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/kent
+    extract: false
+    start: 0x4CD890
+
+  - name: kentAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/kent
+    extract: false
+    start: 0x4DEF80
+    
+  - name: kentSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/kent
+    extract: false
+    start: 0x4DEFA0
+
+  - name: stuTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/stu
+    extract: false
+    start: 0x4DF110
+
+  - name: stuAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/stu
+    extract: false
+    start: 0x4E85D0
+    
+  - name: stuSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/stu
+    extract: false
+    start: 0x4E85F0
+
+  - name: midwifeTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/midwife
+    extract: false
+    start: 0x4E86B0
+
+  - name: midwifeAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/midwife
+    extract: false
+    start: 0x4EFE00
+    
+  - name: midwifeSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/midwife
+    extract: false
+    start: 0x4EFE20
+
+  - name: mayTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/may
+    extract: false
+    start: 0x4EFEB0
+
+  - name: mayAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/may
+    extract: false
+    start: 0x4F47F0
+    
+  - name: maySpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/may
+    extract: false
+    start: 0x4F4810
+
+  - name: rickTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/rick
+    extract: false
+    start: 0x4F4890
+
+  - name: rickAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/rick
+    extract: false
+    start: 0x4FBFF0
+    
+  - name: rickSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/rick
+    extract: false
+    start: 0x4FC010
+
+  - name: pastorTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/pastor
+    extract: false
+    start: 0x4FC140
+
+  - name: pastorAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/pastor
+    extract: false
+    start: 0x503AB0
+    
+  - name: pastorSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/pastor
+    extract: false
+    start: 0x503AD0
+
+  - name: shipperTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/shipper
+    extract: false
+    start: 0x503BC0
+
+  - name: shipperAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/shipper
+    extract: false
+    start: 0x518B00
+    
+  - name: shipperSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/shipper
+    extract: false
+    start: 0x518B20
+
+  - name: saibaraTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/saibara
+    extract: false
+    start: 0x518BB0
+
+  - name: saibaraAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/saibara
+    extract: false
+    start: 0x520D00
+    
+  - name: saibaraSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/saibara
+    extract: false
+    start: 0x520D20
+
+  - name: dukeTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/duke
+    extract: false
+    start: 0x520DB0
+
+  - name: dukeAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/duke
+    extract: false
+    start: 0x5249E0
+    
+  - name: dukeSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/duke
+    extract: false
+    start: 0x524A00
+
+  - name: gregTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/greg
+    extract: false
+    start: 0x524AE0
+
+  - name: gregAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/greg
+    extract: false
+    start: 0x52F260
+    
+  - name: gregSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/greg
+    extract: false
+    start: 0x52F280
+
+  - name: assistantCarpenterTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/assistantCarpenter
+    extract: false
+    start: 0x52F370
+
+  - name: assistantCarpenterAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/assistantCarpenter
+    extract: false
+    start: 0x5488A0
+    
+  - name: assistantCarpenterSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/assistantCarpenter
+    extract: false
+    start: 0x5488C0
+
+  - name: masterCarpenterTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/masterCarpenter
+    extract: false
+    start: 0x5489C0
+
+  - name: masterCarpenterAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/masterCarpenter
+    extract: false
+    start: 0x555460
+    
+  - name: masterCarpenterSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/masterCarpenter
+    extract: false
+    start: 0x555480
+
+  - name: harvestSpriteTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/harvestSprite
+    extract: false
+    start: 0x555570
+
+  - name: harvestSpriteAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/harvestSprite
+    extract: false
+    start: 0x55A640
+    
+  - name: harvestSpriteSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/harvestSprite
+    extract: false
+    start: 0x55A660
+
+  - name: barleyTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/barley
+    extract: false
+    start: 0x55A730
+
+  - name: barleyAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/barley
+    extract: false
+    start: 0x560330
+    
+  - name: barleySpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/barley
+    extract: false
+    start: 0x560350
+
+  - name: sydneyTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/sydney
+    extract: false
+    start: 0x5603D0
+
+  - name: sydneyAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/sydney
+    extract: false
+    start: 0x5665C0
+    
+  - name: sydneySpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/sydney
+    extract: false
+    start: 0x5665E0
+
+  - name: entomologistTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/entomologist
+    extract: false
+    start: 0x566630
+
+  - name: entomologistAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/entomologist
+    extract: false
+    start: 0x56ED20
+    
+  - name: entomologistSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/entomologist
+    extract: false
+    start: 0x56ED40
+
+  - name: gourmetJudgeTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/gourmetJudge
+    extract: false
+    start: 0x56EE30
+
+  - name: gourmetJudgeAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/gourmetJudge
+    extract: false
+    start: 0x578CD0
+    
+  - name: gourmetJudgeSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/gourmetJudge
+    extract: false
+    start: 0x578CF0
+
+  - name: photographerTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/photographer
+    extract: false
+    start: 0x578D60
+
+  - name: photographerAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/photographer
+    extract: false
+    start: 0x583C30
+
+  - name: photographerSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/photographer
+    extract: false
+    start: 0x583C50
+
+  - name: shadySalesmanTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/shadySalesman
+    extract: false
+    start: 0x583D40
+
+  - name: shadySalesmanAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/shadySalesman
+    extract: false
+    start: 0x593730
+    
+  - name: shadySalesmanSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/shadySalesman
+    extract: false
+    start: 0x593750
+
+  - name: mrsManaSonTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/mrsManaSon
+    extract: false
+    start: 0x593840
+
+  - name: mrsManaSonAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/mrsManaSon
+    extract: false
+    start: 0x597040
+    
+  - name: mrsManaSonSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/mrsManaSon
+    extract: false
+    start: 0x597060
+
+  - name: mrsManaTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/mrsMana
+    extract: false
+    start: 0x5970C0
+
+  - name: mrsManaAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/mrsMana
+    extract: false
+    start: 0x59CD00
+    
+  - name: mrsManaSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/mrsMana
+    extract: false
+    start: 0x59CD20
+
+  - name: oldManTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/oldMan
+    extract: false
+    start: 0x59CD90
+
+  - name: oldManAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/oldMan
+    extract: false
+    start: 0x5A2580
+    
+  - name: oldManSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/oldMan
+    extract: false
+    start: 0x5A25A0
+
+  - name: oldWomanTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/oldWoman
+    extract: false
+    start: 0x5A26A0
+
+  - name: oldWomanAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/oldWoman
+    extract: false
+    start: 0x5A7910
+    
+  - name: oldWomanSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/oldWoman
+    extract: false
+    start: 0x5A7930
+
+  - name: touristCoupleManTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/touristCoupleMan
+    extract: false
+    start: 0x5A7A10
+
+  - name: touristCoupleManAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/touristCoupleMan
+    extract: false
+    start: 0x5AE6A0
+    
+  - name: touristCoupleManSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/touristCoupleMan
+    extract: false
+    start: 0x5AE6C0
+
+  - name: touristCoupleWomanTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/touristCoupleWoman
+    extract: false
+    start: 0x5AE7B0
+
+  - name: touristCoupleWomanAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/touristCoupleWoman
+    extract: false
+    start: 0x5B3AA0
+    
+  - name: touristCoupleWomanSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/touristCoupleWoman
+    extract: false
+    start: 0x5B3AC0
+
+  - name: festivalGirl1Texture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/festivalGirl1
+    extract: false
+    start: 0x5B3BC0
+
+  - name: festivalGirl1AssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/festivalGirl1
+    extract: false
+    start: 0x5BA0C0
+    
+  - name: festivalGirl1SpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/festivalGirl1
+    extract: false
+    start: 0x5BA0E0
+
+  - name: festivalGirl2Texture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/festivalGirl2
+    extract: false
+    start: 0x5BA1D0
+
+  - name: festivalGirl2AssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/festivalGirl2
+    extract: false
+    start: 0x5C04E0
+    
+  - name: festivalGirl2SpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/festivalGirl2
+    extract: false
+    start: 0x5C0500
+
+  - name: festivalGirl3Texture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/festivalGirl3
+    extract: false
+    start: 0x5C0630
+
+  - name: festivalGirl3AssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/festivalGirl3
+    extract: false
+    start: 0x5C7F70
+    
+  - name: festivalGirl3SpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/festivalGirl3
+    extract: false
+    start: 0x5C7F90
+
+  - name: harvestGoddessTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/harvestGoddess
+    extract: false
+    start: 0x5C8110
+
+  - name: harvestGoddessAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/harvestGoddess
+    extract: false
+    start: 0x5CB4D0
+    
+  - name: harvestGoddessSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/harvestGoddess
+    extract: false
+    start: 0x5CB4F0
+
+  - name: spiritFestivalOcarinaPerformerTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/spiritFestivalOcarinaPerformer
+    extract: false
+    start: 0x5CB520
+
+  - name: spiritFestivalOcarinaPerformerAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/spiritFestivalOcarinaPerformer
+    extract: false
+    start: 0x5CE500
+
+  - name: spiritFestivalOcarinaPerformerSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/spiritFestivalOcarinaPerformer
+    extract: false
+    start: 0x5CE520
+
+  - name: kappaTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/kappa
+    extract: false
+    start: 0x5CE540
+
+  - name: kappaAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/kappa
+    extract: false
+    start: 0x5CF260
+
+  - name: kappaSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/kappa
+    extract: false
+    start: 0x5CF280
+
+  - name: princessTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/princess
+    extract: false
+    start: 0x5CF2A0
+
+  - name: princessAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/princess
+    extract: false
+    start: 0x5D1130
+
+  - name: princessSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/princess
+    extract: false
+    start: 0x5D1150
+
+  - name: emptyNPCTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/empty
+    start: 0x5D11A0
+
+  - name: emptyNPCAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/empty
+    start: 0x5D11B0
+
+  - name: emptyNPCSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/empty
+    start: 0x5D11C0
+
+  - name: bunnyTexture
+    type: bin
+    dir: assets/sprites/entitySprites/animals/bunny
+    extract: false
+    start: 0x5D11D0
+
+  - name: bunnyAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/bunny
+    extract: false
+    start: 0x5D5AF0
+
+  - name: bunnySpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/bunny
+    extract: false
+    start: 0x5D5B10
+
+  - name: mouseTexture
+    type: bin
+    dir: assets/sprites/entitySprites/animals/mouse
+    extract: false
+    start: 0x5D5BA0
+
+  - name: mouseAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/mouse
+    extract: false
+    start: 0x5D8F80
+
+  - name: mouseSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/mouse
+    extract: false
+    start: 0x5D8FA0
+
+  - name: foxTexture
+    type: bin
+    dir: assets/sprites/entitySprites/animals/fox
+    extract: false
+    start: 0x5D9090
+
+  - name: foxAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/fox
+    extract: false
+    start: 0x5DF4B0
+
+  - name: foxSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/fox
+    extract: false
+    start: 0x5DF4D0
+
+  - name: monkeyTexture
+    type: bin
+    dir: assets/sprites/entitySprites/animals/monkey
+    extract: false
+    start: 0x5DF590
+
+  - name: monkeyAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/monkey
+    extract: false
+    start: 0x5E5EA0
+
+  - name: monkeySpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/monkey
+    extract: false
+    start: 0x5E5EC0
+
+  - name: hawkTexture
+    type: bin
+    dir: assets/sprites/entitySprites/animals/hawk
+    extract: false
+    start: 0x5E5FF0
+
+  - name: hawkAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/hawk
+    extract: false
+    start: 0x5EBE60
+
+  - name: hawkSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/hawk
+    extract: false
+    start: 0x5EBE80
+
+  - name: moleTexture
+    type: bin
+    dir: assets/sprites/entitySprites/animals/mole
+    extract: false
+    start: 0x5EBFC0
+
+  - name: moleAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/mole
+    extract: false
+    start: 0x5ECDD0
+
+  - name: moleSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/mole
+    extract: false
+    start: 0x5ECDF0
+
+  - name: squirrelTexture
+    type: bin
+    dir: assets/sprites/entitySprites/animals/squirrel
+    extract: false
+    start: 0x5ECE40
+
+  - name: squirrelAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/squirrel
+    extract: false
+    start: 0x5F1160
+
+  - name: squirrelSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/squirrel
+    extract: false
+    start: 0x5F1180
+
+  - name: birdTexture
+    type: bin
+    dir: assets/sprites/entitySprites/animals/bird
+    extract: false
+    start: 0x5F1270
+
+  - name: birdAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/bird
+    extract: false
+    start: 0x5F5530
+
+  - name: birdSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/bird
+    extract: false
+    start: 0x5F5550
+
+  - name: catTexture
+    type: bin
+    dir: assets/sprites/entitySprites/animals/cat
+    extract: false
+    start: 0x5F55D0
+
+  - name: catAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/cat
+    extract: false
+    start: 0x5FD520
+
+  - name: catSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/cat
+    extract: false
+    start: 0x5FD540
+
+  - name: dogVillageTexture
+    type: bin
+    dir: assets/sprites/entitySprites/animals/dogVillage
+    extract: false
+    start: 0x5FD670
+
+  - name: dogVillageAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/dogVillage
+    extract: false
+    start: 0x60E7F0
+
+  - name: dogVillageSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/dogVillage
+    extract: false
+    start: 0x60E810
+
+  - name: dogTexture
+    type: bin
+    dir: assets/sprites/entitySprites/animals/dog
+    extract: false
+    start: 0x60EC20
+
+  - name: dogAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/dog
+    extract: false
+    start: 0x630EC0
+
+  - name: dogSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/dog
+    extract: false
+    start: 0x630EE0
+
+  - name: horsePonyTexture
+    type: bin
+    dir: assets/sprites/entitySprites/animals/horsePony
+    extract: false
+    start: 0x631400
+
+  - name: horsePonyAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/horsePony
+    extract: false
+    start: 0x64FAC0
+
+  - name: horsePonySpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/horsePony
+    extract: false
+    start: 0x64FAE0
+
+  - name: horseGrownTexture
+    type: bin
+    dir: assets/sprites/entitySprites/animals/horseGrown
+    extract: false
+    start: 0x64FCE0
+
+  - name: horseGrownAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/horseGrown
+    extract: false
+    start: 0x6AF5F0
+
+  - name: horseGrownSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/horseGrown
+    extract: false
+    start: 0x6AF610
+
+  - name: chickTexture
+    type: bin
+    dir: assets/sprites/entitySprites/animals/chick
+    extract: false
+    start: 0x6AF8A0
+
+  - name: chickAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/chick
+    extract: false
+    start: 0x6B3DE0
+
+  - name: chickSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/chick
+    extract: false
+    start: 0x6B3E00
+
+  - name: chickenTexture
+    type: bin
+    dir: assets/sprites/entitySprites/animals/chicken
+    extract: false
+    start: 0x6B3F30
+
+  - name: chickenAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/chicken
+    extract: false
+    start: 0x6BB590
+
+  - name: chickenSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/chicken
+    extract: false
+    start: 0x6BB5B0
+
+  - name: calfTexture
+    type: bin
+    dir: assets/sprites/entitySprites/animals/calf
+    extract: false
+    start: 0x6BB880
+
+  - name: calfAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/calf
+    extract: false
+    start: 0x6D3600
+
+  - name: calfSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/calf
+    extract: false
+    start: 0x6D3620
+
+  - name: youngCowTexture
+    type: bin
+    dir: assets/sprites/entitySprites/animals/youngCow
+    extract: false
+    start: 0x6D3820
+
+  - name: youngCowAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/youngCow
+    extract: false
+    start: 0x6F5E10
+
+  - name: youngCowSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/youngCow
+    extract: false
+    start: 0x6F5E30
+
+  - name: cowTexture
+    type: bin
+    dir: assets/sprites/entitySprites/animals/cow
+    extract: false
+    start: 0x6F6130
+
+  - name: cowAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/cow
+    extract: false
+    start: 0x76BCB0
+
+  - name: cowSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/cow
+    extract: false
+    start: 0x76BCD0
+
+  - name: lambTexture
+    type: bin
+    dir: assets/sprites/entitySprites/animals/lamb
+    extract: false
+    start: 0x76C1B0
+
+  - name: lambAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/lamb
+    extract: false
+    start: 0x775740
+
+  - name: lambSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/lamb
+    extract: false
+    start: 0x775760
+
+  - name: sheepTexture
+    type: bin
+    dir: assets/sprites/entitySprites/animals/sheep
+    extract: false
+    start: 0x7759C0
+
+  - name: sheepAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/sheep
+    extract: false
+    start: 0x794C50
+
+  - name: sheepSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/sheep
+    extract: false
+    start: 0x794C70
+
+  - name: frogTexture
+    type: bin
+    dir: assets/sprites/entitySprites/animals/frog
+    extract: false
+    start: 0x794F10
+
+  - name: frogAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/frog
+    extract: false
+    start: 0x797A60
+
+  - name: frogSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/frog
+    extract: false
+    start: 0x797A80
+
+  - name: crabTexture
+    type: bin
+    dir: assets/sprites/entitySprites/animals/crab
+    extract: false
+    start: 0x797B70
+
+  - name: crabAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/crab
+    extract: false
+    start: 0x79A6C0
+
+  - name: crabSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/crab
+    extract: false
+    start: 0x79A6E0
+
+  - name: hornedBeetleTexture
+    type: bin
+    dir: assets/sprites/entitySprites/animals/hornedBeetle
+    extract: false
+    start: 0x79A7D0
+
+  - name: hornedBeetleAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/hornedBeetle
+    extract: false
+    start: 0x79AC70
+
+  - name: hornedBeetleSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/hornedBeetle
+    extract: false
+    start: 0x79AC90
+
+  - name: stagBeetleTexture
+    type: bin
+    dir: assets/sprites/entitySprites/animals/stagBeetle
+    extract: false
+    start: 0x79AD70
+
+  - name: stagBeetleAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/stagBeetle
+    extract: false
+    start: 0x79B210
+
+  - name: stagBeetleSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/stagBeetle
+    extract: false
+    start: 0x79B230
+
+  - name: cricketTexture
+    type: bin
+    dir: assets/sprites/entitySprites/animals/cricket
+    extract: false
+    start: 0x79B310
+
+  - name: cricketAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/cricket
+    extract: false
+    start: 0x79B680
+
+  - name: cricketSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/cricket
+    extract: false
+    start: 0x79B6A0
+
+  - name: cicadaTexture
+    type: bin
+    dir: assets/sprites/entitySprites/animals/cicada
+    extract: false
+    start: 0x79B780
+
+  - name: cicadaAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/cicada
+    extract: false
+    start: 0x79BB80
+
+  - name: cicadaSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/cicada
+    extract: false
+    start: 0x79BBA0
+
+  - name: whiteButterflyTexture
+    type: bin
+    dir: assets/sprites/entitySprites/animals/whiteButterfly
+    extract: false
+    start: 0x79BEB0
+
+  - name: whiteButterflyAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/whiteButterfly
+    extract: false
+    start: 0x79C1D0
+
+  - name: whiteButterflySpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/whiteButterfly
+    extract: false
+    start: 0x79C1F0
+
+  - name: ladybugTexture
+    type: bin
+    dir: assets/sprites/entitySprites/animals/ladybug
+    extract: false
+    start: 0x79C2D0
+
+  - name: ladybugAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/ladybug
+    extract: false
+    start: 0x79C750
+
+  - name: ladybugSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/ladybug
+    extract: false
+    start: 0x79C770
+
+  - name: dragonflyTexture
+    type: bin
+    dir: assets/sprites/entitySprites/animals/dragonfly
+    extract: false
+    start: 0x79CA80
+
+  - name: dragonflyAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/dragonfly
+    extract: false
+    start: 0x79CCD0
+
+  - name: dragonflySpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/dragonfly
+    extract: false
+    start: 0x79CCF0
+
+  - name: grasshopperTexture
+    type: bin
+    dir: assets/sprites/entitySprites/animals/grasshopper
+    extract: false
+    start: 0x79CDD0
+
+  - name: grasshopperAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/grasshopper
+    extract: false
+    start: 0x79D140
+
+  - name: grasshopperSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/grasshopper
+    extract: false
+    start: 0x79D160
+
+  - name: snakeTexture
+    type: bin
+    dir: assets/sprites/entitySprites/animals/snake
+    extract: false
+    start: 0x79D240
+
+  - name: snakeAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/snake
+    extract: false
+    start: 0x7A0050
+
+  - name: snakeSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/snake
+    extract: false
+    start: 0x7A0070
+
+  - name: purpleButterflyTexture
+    type: bin
+    dir: assets/sprites/entitySprites/animals/purpleButterfly
+    extract: false
+    start: 0x7A0130
+
+  - name: purpleButterflyAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/purpleButterfly
+    extract: false
+    start: 0x7A0B90
+
+  - name: purpleButterflySpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/purpleButterfly
+    extract: false
+    start: 0x7A0BB0
+
+  - name: dadTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/dad
+    extract: false
+    start: 0x7A0C90
+
+  - name: dadAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/dad
+    extract: false
+    start: 0x7A5F30
+
+  - name: dadSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/dad
+    extract: false
+    start: 0x7A5F50
+
+  - name: cowIndoorsTexture
+    type: bin
+    dir: assets/sprites/entitySprites/animals/cowIndoors
+    extract: false
+    start: 0x7A6040
+
+  - name: cowIndoorsAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/cowIndoors
+    extract: false
+    start: 0x7DDCC0
+
+  - name: cowIndoorsSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/cowIndoors
+    extract: false
+    start: 0x7DDCE0
+
+  - name: horseUnbridledTexture
+    type: bin
+    dir: assets/sprites/entitySprites/animals/horseUnbridled
+    extract: false
+    start: 0x7DDEE0
+
+  - name: horseUnbridledAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/horseUnbridled
+    extract: false
+    start: 0x7E9FE0
+
+  - name: horseUnbridledSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/animals/horseUnbridled
+    extract: false
+    start: 0x7EA000
+
+  - name: horseRacerTexture
+    type: bin
+    dir: assets/sprites/entitySprites/horseRace/horseRacer
+    extract: false
+    start: 0x7EA0F0
+
+  - name: horseRacerAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/horseRace/horseRacer
+    extract: false
+    start: 0x7F4A90
+
+  - name: horseRacerSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/horseRace/horseRacer
+    extract: false
+    start: 0x7F4AB0
+
+  - name: emptyEntityTexture
+    type: bin
+    dir: assets/sprites/entitySprites/empty
+    start: 0x7F4CE0
+
+  - name: emptyEntityAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/empty
+    start: 0x7F4CF0
+
+  - name: emptyEntitySpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/empty
+    start: 0x7F4D00
+
+  - name: mariaHarrisBabyTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/mariaHarrisBaby
+    extract: false
+    start: 0x7F4D10
+
+  - name: mariaHarrisBabyAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/mariaHarrisBaby
+    extract: false
+    start: 0x7F65D0
+
+  - name: mariaHarrisBabySpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/mariaHarrisBaby
+    extract: false
+    start: 0x7F65F0
+
+  - name: popuriGrayBabyTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/popuriGrayBaby
+    extract: false
+    start: 0x7F6610
+
+  - name: popuriGrayBabyAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/popuriGrayBaby
+    extract: false
+    start: 0x7F8120
+
+  - name: popuriGrayBabySpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/popuriGrayBaby
+    extract: false
+    start: 0x7F8140
+
+  - name: elliJeffBabyTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/elliJeffBaby
+    extract: false
+    start: 0x7F8160
+
+  - name: elliJeffBabyAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/elliJeffBaby
+    extract: false
+    start: 0x7F99F0
+
+  - name: elliJeffBabySpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/elliJeffBaby
+    extract: false
+    start: 0x7F9A10
+
+  - name: annCliffBabyTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/annCliffBaby
+    extract: false
+    start: 0x7F9A30
+
+  - name: annCliffBabyAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/annCliffBaby
+    extract: false
+    start: 0x7FB2C0
+
+  - name: annCliffBabySpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/annCliffBaby
+    extract: false
+    start: 0x7FB2E0
+
+  - name: karenKaiBabyTexture
+    type: bin
+    dir: assets/sprites/entitySprites/npc/karenKaiBaby
+    extract: false
+    start: 0x7FB300
+
+  - name: karenKaiBabyAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/karenKaiBaby
+    extract: false
+    start: 0x7FCCD0
+
+  - name: karenKaiBabySpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/npc/karenKaiBaby
+    extract: false
+    start: 0x7FCCF0
+
+  - name: shadowsTexture
+    type: bin
+    dir: assets/sprites/entitySprites/shadows
+    extract: false
+    start: 0x7FCD10
+
+  - name: shadowsAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/shadows
+    extract: false
+    start: 0x7FD1E0
+
+  - name: expressionBubblesTexture
+    type: bin
+    dir: assets/sprites/entitySprites/expressionBubbles
+    extract: false
+    start: 0x7FD200
+
+  - name: expressionBubblesAssetsIndex
+    type: bin
+    dir: assets/sprites/entitySprites/expressionBubbles
+    extract: false
+    start: 0x800430
+
+  - name: expressionBubblesSpritesheetIndex
+    type: bin
+    dir: assets/sprites/entitySprites/expressionBubbles
+    extract: false
+    start: 0x800450
+
+  # maps
+  
+  # map format: 
+  #   main index with offsets for each subasset
+  #   map grid
+  #     header
+  #     tile size x
+  #     tile size z
+  #     map width
+  #     map height
+  #     unused value
+  #     total tile count
+  #     linear grid position to tile number/tile index array
+  #   tile vertices and rendering metadata
+  #     index
+  #     vertices
+  #       header
+  #       y offset
+  #       fallback height
+  #       texture index (bits 0-6 encode the index, while bit 7 means use max/invalid value (set on tiles with shared textures))
+  #       vertices per tile (usually 4)
+  #       coordinates array (3 x 4, char-sized elements)
+  #     rendering metadata (format depends on the tile is being rendered as a triangle or quad and if a texture or a solid color is being used)
+  #       header
+  #       flags (render 1 triangle, render 2 triangles, use solid color vs. texture)
+  #       unused field
+  #       unused field
+  #       if using a texture:
+  #         array of vtx, tc[0], tc[1] for gSPModifyVertex commands
+  #         if quad:
+  #           array for vtx 4
+  #       if using a solid color:
+  #         r
+  #         g
+  #         b
+  #       triangle 1 bitfield (encodes the vertex order for gSP1Triangle)
+  #       if quad:
+  #         triangle 2 bitfield (encodes the vertex order for gSP2Triangles)
+  #   terrain quads for each tile
+  #     header
+  #     base height
+  #     triangle 1
+  #       point 1:
+  #         x, y, z
+  #       point 2:
+  #         x, y, z
+  #       point 3:
+  #         x, y, z
+  #     triangle 2
+  #       point 1:
+  #         x, y, z
+  #       point 2:
+  #         x, y, z
+  #       point 3:
+  #         x, y, z
+  #   linear grid position to level interaction index array
+  #   core map objects
+  #     total core map objects
+  #     object 1
+  #       metadata
+  #         header
+  #         sprite index
+  #         repeat object count
+  #       subobject 1
+  #         flags
+  #         x
+  #         y
+  #         z
+  #       subobject 2
+  #         ...
+  #     object 2
+  #       ...
+  #   tile textures (CI4)
+  #     index
+  #     textures
+  #       header
+  #       dimensions
+  #       texture
+  #   tile palettes
+  #     index
+  #     palettes
+  #       header
+  #       palette
+  #   core map object textures (CI4)
+  #     index
+  #     textures
+  #       header
+  #       dimensions
+  #       texture
+  #   core map object palettes
+  #     index
+  #     palettes
+  #       header
+  #       palette
+  #   map additions metadata
+  #     header
+  #     x
+  #     z
+  #     width
+  #     height
+  #     grid to tile index values (for appending to the main grid to tile index array)
+  #     grid to level interaction index (for appending to main grid to level interaction index array)
+  #   padding/end, 8 bytes
+  
+  - name: ranchSpringMap
+    type: hm64map
+    dir: maps/ranch
+    start: 0x800530
+
+  - name: ranchSummerMap
+    type: hm64map
+    dir: maps/ranch
+    start: 0x80D9D0
+
+  - name: ranchFallMap
+    type: hm64map
+    dir: maps/ranch
+    start: 0x81AE30
+
+  - name: ranchWinterMap
+    type: hm64map
+    dir: maps/ranch
+    start: 0x828FC0
+
+  - name: annsRoomMap
+    type: hm64map
+    dir: maps/ranch
+    start: 0x836420
+
+  - name: ranchBarnMap
+    type: hm64map
+    dir: maps/ranch
+    start: 0x83DC90
+
+  - name: ranchStoreMap
+    type: hm64map
+    dir: maps/ranch
+    start: 0x849700
+
+  - name: ranchHouseMap
+    type: hm64map
+    dir: maps/ranch
+    start: 0x84F100
+
+  - name: emptyMap1
+    type: hm64map
+    dir: maps/unknown
+    start: 0x856B80
+
+  - name: beachSpringMap
+    type: hm64map
+    dir: maps/beach
+    start: 0x856B90
+  
+  - name: beachSummerMap
+    type: hm64map
+    dir: maps/beach
+    start: 0x85EE70
+
+  - name: beachFallMap
+    type: hm64map
+    dir: maps/beach
+    start: 0x867150
+
+  - name: beachWinterMap
+    type: hm64map
+    dir: maps/beach
+    start: 0x86F430
+
+  - name: raceTrackSpringMap
+    type: hm64map
+    dir: maps/raceTrack
+    start: 0x877710
+
+  # empty
+  - name: raceTrackSummerMap
+    type: hm64map
+    dir: maps/raceTrack
+    start: 0x87F510
+
+  - name: raceTrackFallMap
+    type: hm64map
+    dir: maps/raceTrack
+    start: 0x87F520
+
+  - name: raceTrackWinterMap
+    type: hm64map
+    dir: maps/raceTrack
+    start: 0x887320
+
+  - name: mountain1SpringMap
+    type: hm64map
+    dir: maps/mountain/mountain1
+    start: 0x88F120
+
+  - name: mountain1SummerMap
+    type: hm64map
+    dir: maps/mountain/mountain1
+    start: 0x8A6C20
+
+  - name: mountain1FallMap
+    type: hm64map
+    dir: maps/mountain/mountain1
+    start: 0x8BE720
+
+  - name: mountain1WinterMap
+    type: hm64map
+    dir: maps/mountain/mountain1
+    start: 0x8D6220
+
+  - name: mountain2SpringMap
+    type: hm64map
+    dir: maps/mountain/mountain2
+    start: 0x8ED8E0
+
+  - name: mountain2SummerMap
+    type: hm64map
+    dir: maps/mountain/mountain2
+    start: 0x905980
+
+  - name: mountain2FallMap
+    type: hm64map
+    dir: maps/mountain/mountain2
+    start: 0x91D8A0
+
+  - name: mountain2WinterMap
+    type: hm64map
+    dir: maps/mountain/mountain2
+    start: 0x9357C0
+
+  - name: topOfMountain1SpringMap
+    type: hm64map
+    dir: maps/mountain/topOfMountain1
+    start: 0x94D6E0
+
+  - name: topOfMountain1SummerMap
+    type: hm64map
+    dir: maps/mountain/topOfMountain1
+    start: 0x961BD0
+
+  - name: topOfMountain1FallMap
+    type: hm64map
+    dir: maps/mountain/topOfMountain1
+    start: 0x975E50
+
+  - name: topOfMountain1WinterMap
+    type: hm64map
+    dir: maps/mountain/topOfMountain1
+    start: 0x98A0D0
+
+  - name: moonMountainSpringMap
+    type: hm64map
+    dir: maps/mountain/moonMountain
+    start: 0x99F9C0
+
+  - name: moonMountainSummerMap
+    type: hm64map
+    dir: maps/mountain/moonMountain
+    start: 0x9B4530
+
+  - name: moonMountainFallMap
+    type: hm64map
+    dir: maps/mountain/moonMountain
+    start: 0x9C90A0
+
+  - name: moonMountainWinterMap
+    type: hm64map
+    dir: maps/mountain/moonMountain
+    start: 0x9DDC10
+
+  - name: carpentersHutMap
+    type: hm64map
+    dir: maps/carpenterHut
+    start: 0x9F2780
+
+  - name: dumplingHouseMap
+    type: hm64map
+    dir: maps/dumplingHouse
+    start: 0x9FAA80
+
+  - name: pondSpringMap
+    type: hm64map
+    dir: maps/pond
+    start: 0xA04C80
+
+  - name: pondSummerMap
+    type: hm64map
+    dir: maps/pond
+    start: 0xA0CEC0
+
+  - name: pondFallMap
+    type: hm64map
+    dir: maps/pond
+    start: 0xA14F10
+
+  - name: pondWinterMap
+    type: hm64map
+    dir: maps/pond
+    start: 0xA1CF60
+
+  - name: ellisRoomMap
+    type: hm64map
+    dir: maps/bakery
+    start: 0xA24FB0
+
+  - name: bakeryMap
+    type: hm64map
+    dir: maps/bakery
+    start: 0xA2C350
+
+  - name: village1SpringMap
+    type: hm64map
+    dir: maps/village/village1
+    start: 0xA33460
+
+  - name: village1SummerMap
+    type: hm64map
+    dir: maps/village/village1
+    start: 0xA4C640
+
+  - name: village1FallMap
+    type: hm64map
+    dir: maps/village/village1
+    start: 0xA65820
+
+  - name: village1WinterMap
+    type: hm64map
+    dir: maps/village/village1
+    start: 0xA7F2B0
+
+  - name: village2SpringMap
+    type: hm64map
+    dir: maps/village/village2
+    start: 0xA98210
+
+  - name: village2SummerMap
+    type: hm64map
+    dir: maps/village/village2
+    start: 0xAAC2C0
+
+  - name: village2FallMap
+    type: hm64map
+    dir: maps/village/village2
+    start: 0xAC0370
+
+  - name: village2WinterMap
+    type: hm64map
+    dir: maps/village/village2
+    start: 0xAD4420
+
+  - name: popurisRoomMap
+    type: hm64map
+    dir: maps/flowerShop
+    start: 0xAE84D0
+
+  - name: flowerShopMap
+    type: hm64map
+    dir: maps/flowerShop
+    start: 0xAEF920
+
+  - name: churchMap
+    type: hm64map
+    dir: maps/church
+    start: 0xAF4F00
+
+  - name: souvenirShopMap
+    type: hm64map
+    dir: maps/souvenirShop
+    start: 0xAFAAC0 
+
+  - name: squareSpringMap
+    type: hm64map
+    dir: maps/square
+    start: 0xAFF110
+
+  - name: squareSummerMap
+    type: hm64map
+    dir: maps/square
+    start: 0xB0E3C0
+
+  - name: squareFallMap
+    type: hm64map
+    dir: maps/square
+    start: 0xB1D460
+
+  - name: squareWinterMap
+    type: hm64map
+    dir: maps/square
+    start: 0xB2C500
+
+  - name: ricksShopMap
+    type: hm64map
+    dir: maps/rickShop
+    start: 0xB38990
+
+  - name: midwifesHouseMap
+    type: hm64map
+    dir: maps/midwife
+    start: 0xB3CE10
+
+  - name: tavernMap
+    type: hm64map
+    dir: maps/tavern
+    start: 0xB41CC0
+
+  - name: libraryMap
+    type: hm64map
+    dir: maps/library
+    start: 0xB4A9C0
+
+  - name: mariasRoomMap
+    type: hm64map
+    dir: maps/mayorsHouse
+    start: 0xB4E440
+
+  - name: mayorsHouseMap
+    type: hm64map
+    dir: maps/mayorsHouse
+    start: 0xB543D0
+
+  - name: potionShopBackroomMap
+    type: hm64map
+    dir: maps/potionShop
+    start: 0xB5B0B0
+
+  - name: potionShopMap
+    type: hm64map
+    dir: maps/potionShop
+    start: 0xB60990
+
+  # referenced in getCantEnterDialogueInfoIndex
+  - name: emptyMap2
+    type: hm64map
+    dir: maps/unknown
+    start: 0xB64E30
+
+  - name: spriteCaveMap
+    type: hm64map
+    dir: maps/cave
+    start: 0xB64E40
+
+  - name: caveMap
+    type: hm64map
+    dir: maps/cave
+    start: 0xB6AAC0
+
+  - name: emptyMineMap
+    type: hm64map
+    dir: maps/mine
+    start: 0xB6E700
+
+  - name: mineMap
+    type: hm64map
+    dir: maps/mine
+    start: 0xB6E710
+
+  - name: karensRoomMap
+    type: hm64map
+    dir: maps/vineyard
+    start: 0xB6FB70
+
+  - name: vineyardSpringMap
+    type: hm64map
+    dir: maps/vineyard
+    start: 0xB7AFB0
+
+  - name: vineyardSummerMap
+    type: hm64map
+    dir: maps/vineyard
+    start: 0xB8B840
+
+  - name: vineyardFallMap
+    type: hm64map
+    dir: maps/vineyard
+    start: 0xB9C0D0
+
+  - name: vineyardWinterMap
+    type: hm64map
+    dir: maps/vineyard
+    start: 0xBAC960
+
+  - name: vineyardHouseMap
+    type: hm64map
+    dir: maps/vineyard
+    start: 0xBBCD10
+
+  - name: vineyardCellar1Map
+    type: hm64map
+    dir: maps/vineyard
+    start: 0xBC5710
+
+  - name: vineyardCellar2Map
+    type: hm64map
+    dir: maps/vineyard
+    start: 0xBC9C30
+
+  - name: roadSpringMap
+    type: hm64map
+    dir: maps/road
+    start: 0xBD1C80
+
+  - name: roadSummerMap
+    type: hm64map
+    dir: maps/road
+    start: 0xBDBD50
+
+  - name: roadFallMap
+    type: hm64map
+    dir: maps/road
+    start: 0xBE5E20
+
+  - name: roadWinterMap
+    type: hm64map
+    dir: maps/road
+    start: 0xBEFEF0
+
+  - name: farmSpringMap
+    type: hm64map
+    dir: maps/farm
+    start: 0xBF9FC0
+
+  - name: farmSummerMap
+    type: hm64map
+    dir: maps/farm
+    start: 0xC13C40
+
+  - name: farmFallMap
+    type: hm64map
+    dir: maps/farm
+    start: 0xC2D8C0
+
+  - name: farmWinterMap
+    type: hm64map
+    dir: maps/farm
+    start: 0xC47540
+
+  - name: greenhouseMap
+    type: hm64map
+    dir: maps/greenhouse
+    start: 0xC609F0
+
+  - name: houseMap
+    type: hm64map
+    dir: maps/house
+    start: 0xC64D60
+
+  - name: barnMap
+    type: hm64map
+    dir: maps/farm
+    start: 0xC72FB0
+
+  - name: coopMap
+    type: hm64map
+    dir: maps/farm
+    start: 0xC7DE40
+
+  - name: kitchenMap
+    type: hm64map
+    dir: maps/house
+    start: 0xC840E0
+
+  - name: bathroomMap
+    type: hm64map
+    dir: maps/house
+    start: 0xC8D5C0
+
+  # map objects sprites
+
+  - name: wavesTexture
+    type: bin
+    dir: assets/sprites/mapObjects/beach/waves
+    extract: false
+    start: 0xC951A0
+
+  - name: wavesAssetsIndex
+    type: bin
+    dir: assets/sprites/mapObjects/beach/waves
+    extract: false
+    start: 0xC9D640
+
+  - name: wavesSpritesheetIndex
+    type: bin
+    dir: assets/sprites/mapObjects/beach/waves
+    extract: false
+    start: 0xC9D660
+
+  - name: mountainWaterTexture
+    type: bin
+    dir: assets/sprites/mapObjects/mountain/mountainWater
+    extract: false
+    start: 0xC9D680
+
+  - name: mountainWaterAssetsIndex
+    type: bin
+    dir: assets/sprites/mapObjects/mountain/mountainWater
+    extract: false
+    start: 0xCA0DB0
+
+  - name: mountainWaterSpritesheetIndex
+    type: bin
+    dir: assets/sprites/mapObjects/mountain/mountainWater
+    extract: false
+    start: 0xCA0DD0
+
+  - name: boulderTexture
+    type: bin
+    dir: assets/sprites/mapObjects/mountain/boulder
+    extract: false
+    start: 0xCA0DF0
+
+  - name: boulderAssetsIndex
+    type: bin
+    dir: assets/sprites/mapObjects/mountain/boulder
+    extract: false
+    start: 0xCA3F60
+
+  - name: boulderSpritesheetIndex
+    type: bin
+    dir: assets/sprites/mapObjects/mountain/boulder
+    extract: false
+    start: 0xCA3F80
+
+  - name: bridgeTexture
+    type: bin
+    dir: assets/sprites/mapObjects/mountain/bridge
+    extract: false
+    start: 0xCA3FA0
+
+  - name: bridgeAssetsIndex
+    type: bin
+    dir: assets/sprites/mapObjects/mountain/bridge
+    extract: false
+    start: 0xCA4AF0
+
+  - name: bridgeSpritesheetIndex
+    type: bin
+    dir: assets/sprites/mapObjects/mountain/bridge
+    extract: false
+    start: 0xCA4B10
+
+  - name: stonePillarTexture
+    type: bin
+    dir: assets/sprites/mapObjects/mountain/stonePillar
+    extract: false
+    start: 0xCA4B30
+
+  - name: stonePillarAssetsIndex
+    type: bin
+    dir: assets/sprites/mapObjects/mountain/stonePillar
+    extract: false
+    start: 0xCA4FE0
+
+  - name: stonePillarSpritesheetIndex
+    type: bin
+    dir: assets/sprites/mapObjects/mountain/stonePillar
+    extract: false
+    start: 0xCA5000
+
+  - name: emptyMountainSprite1Texture
+    type: bin
+    dir: assets/sprites/mapObjects/mountain/empty
+    start: 0xCA5010
+
+  - name: emptyMountainSprite2Texture
+    type: bin
+    dir: assets/sprites/mapObjects/mountain/empty
+    start: 0xCA5030
+
+  - name: mountainPathTilesTexture
+    type: bin
+    dir: assets/sprites/mapObjects/mountain/mountainPathTiles
+    extract: false
+    start: 0xCA5040
+
+  - name: mountainPathTilesAssetsIndex
+    type: bin
+    dir: assets/sprites/mapObjects/mountain/mountainPathTiles
+    extract: false
+    start: 0xCA5430
+
+  - name: mountainPathTilesSpritesheetIndex
+    type: bin
+    dir: assets/sprites/mapObjects/mountain/mountainPathTiles
+    extract: false
+    start: 0xCA5450
+
+  - name: steamTexture
+    type: bin
+    dir: assets/sprites/mapObjects/mountain/steam
+    extract: false
+    start: 0xCA5460
+
+  - name: steamAssetsIndex
+    type: bin
+    dir: assets/sprites/mapObjects/mountain/steam
+    extract: false
+    start: 0xCA7500
+
+  - name: steamSpritesheetIndex
+    type: bin
+    dir: assets/sprites/mapObjects/mountain/steam
+    extract: false
+    start: 0xCA7520
+
+  - name: pondWaterTexture
+    type: bin
+    dir: assets/sprites/mapObjects/pond/pondWater
+    extract: false
+    start: 0xCA7540
+
+  - name: pondWaterAssetsIndex
+    type: bin
+    dir: assets/sprites/mapObjects/pond/pondWater
+    extract: false
+    start: 0xCA87D0
+
+  - name: pondWaterSpritesheetIndex
+    type: bin
+    dir: assets/sprites/mapObjects/pond/pondWater
+    extract: false
+    start: 0xCA87F0
+
+  - name: festivalFlowersTexture
+    type: bin
+    dir: assets/sprites/mapObjects/square/festivalFlowers
+    extract: false
+    start: 0xCA8800
+
+  - name: festivalFlowersAssetsIndex
+    type: bin
+    dir: assets/sprites/mapObjects/square/festivalFlowers
+    extract: false
+    start: 0xCA90A0
+
+  - name: festivalFlowersSpritesheetIndex
+    type: bin
+    dir: assets/sprites/mapObjects/square/festivalFlowers
+    extract: false
+    start: 0xCA90C0
+
+  - name: squareFountainTexture
+    type: bin
+    dir: assets/sprites/mapObjects/square/squareFountain
+    extract: false
+    start: 0xCA90D0
+
+  - name: squareFountainAssetsIndex
+    type: bin
+    dir: assets/sprites/mapObjects/square/squareFountain
+    extract: false
+    start: 0xCAA040
+
+  - name: squareFountainSpritesheetIndex
+    type: bin
+    dir: assets/sprites/mapObjects/square/squareFountain
+    extract: false
+    start: 0xCAA060
+
+  - name: village2WaterTexture
+    type: bin
+    dir: assets/sprites/mapObjects/village2/village2Water
+    extract: false
+    start: 0xCAA080
+
+  - name: village2WaterAssetsIndex
+    type: bin
+    dir: assets/sprites/mapObjects/village2/village2Water
+    extract: false
+    start: 0xCAB010
+
+  - name: village2WaterSpritesheetIndex
+    type: bin
+    dir: assets/sprites/mapObjects/village2/village2Water
+    extract: false
+    start: 0xCAB030
+
+  - name: emptyMapSprite1Texture
+    type: bin
+    dir: assets/sprites/mapObjects/unknown/empty
+    start: 0xCAB040
+
+  - name: emptyMapSprite2Texture
+    type: bin
+    dir: assets/sprites/mapObjects/unknown/empty
+    start: 0xCAB060
+
+  - name: emptyMapSprite3Texture
+    type: bin
+    dir: assets/sprites/mapObjects/unknown/empty
+    start: 0xCAB070
+
+  - name: emptyMapSprite4Texture
+    type: bin
+    dir: assets/sprites/mapObjects/unknown/empty
+    start: 0xCAB090
+
+  - name: emptyMapSprite5Texture
+    type: bin
+    dir: assets/sprites/mapObjects/unknown/empty
+    start: 0xCAB0A0
+
+  - name: emptyMapSprite6Texture
+    type: bin
+    dir: assets/sprites/mapObjects/unknown/empty
+    start: 0xCAB0C0
+
+  - name: stoneTexture
+    type: bin
+    dir: assets/sprites/mapObjects/bathroom/stone
+    extract: false
+    start: 0xCAB0D0
+
+  - name: stoneAssetsIndex
+    type: bin
+    dir: assets/sprites/mapObjects/bathroom/stone
+    extract: false
+    start: 0xCAB310
+
+  - name: stoneSpritesheetIndex
+    type: bin
+    dir: assets/sprites/mapObjects/bathroom/stone
+    extract: false
+    start: 0xCAB330
+
+  - name: vineyardTreeTexture
+    type: bin
+    dir: assets/sprites/mapObjects/vineyard/vineyardTree
+    extract: false
+    start: 0xCAB340
+
+  - name: vineyardTreeAssetsIndex
+    type: bin
+    dir: assets/sprites/mapObjects/vineyard/vineyardTree
+    extract: false
+    start: 0xCAD490
+
+  - name: vineyardTreeSpritesheetIndex
+    type: bin
+    dir: assets/sprites/mapObjects/vineyard/vineyardTree
+    extract: false
+    start: 0xCAD4B0
+
+  - name: emptyMap1Texture
+    type: bin
+    dir: assets/sprites/mapObjects/unknown/empty
+    start: 0xCAD4D0
+
+  - name: emptyMap2Texture
+    type: bin
+    dir: assets/sprites/mapObjects/unknown/empty
+    start: 0xCAD4F0
+
+  - name: farmPondTexture
+    type: bin
+    dir: assets/sprites/mapObjects/farm/farmPond
+    extract: false
+    start: 0xCAD500
+
+  - name: farmPondAssetsIndex
+    type: bin
+    dir: assets/sprites/mapObjects/farm/farmPond
+    extract: false
+    start: 0xCAD5E0
+
+  - name: farmPondSpritesheetIndex
+    type: bin
+    dir: assets/sprites/mapObjects/farm/farmPond
+    extract: false
+    start: 0xCAD600
+
+  # misc. sprites (fx, ui, overlay screens, map add-ons etc.)
+
+  # ci4 format
+  #   spritesheet
+  #     index
+  #     ci4 textures
+  #       header
+  #       dimensions
+  #       texture
+  #   palette
+  #     index
+  #     palettes
+  #   animation
+  #     index
+  #     animation data
+  #   sprite to palette map
+
+  - name: funeralIntroTexture
+    type: bin
+    dir: assets/sprites/effects/funeralIntro
+    extract: false
+    start: 0xCAD610
+
+  - name: funeralIntroAssetsIndex
+    type: bin
+    dir: assets/sprites/effects/funeralIntro
+    extract: false
+    start: 0xCB4D10
+
+  - name: moonMountainBackgroundTexture
+    type: bin
+    dir: assets/sprites/effects/moonMountainBackground
+    extract: false
+    start: 0xCB4D30
+
+  - name: moonMountainBackgroundAssetsIndex
+    type: bin
+    dir: assets/sprites/effects/moonMountainBackground
+    extract: false
+    start: 0xCB9920
+
+  - name: horseRaceTexture
+    type: bin
+    dir: assets/sprites/effects/horseRace
+    extract: false
+    start: 0xCB9940
+
+  - name: horseRaceAssetsIndex
+    type: bin
+    dir: assets/sprites/effects/horseRace
+    extract: false
+    start: 0xCBE580
+
+  - name: emptyEffectTexture
+    type: bin
+    dir: assets/sprites/effects/empty
+    start: 0xCBE5A0
+
+  - name: splashTexture
+    type: bin
+    dir: assets/sprites/effects/splash
+    extract: false
+    start: 0xCBE5C0
+
+  - name: splashAssetsIndex
+    type: bin
+    dir: assets/sprites/effects/splash
+    extract: false
+    start: 0xCBFDF0
+
+  - name: sparklersTexture
+    type: bin
+    dir: assets/sprites/effects/sparklers
+    extract: false
+    start: 0xCBFE10
+
+  - name: sparklersAssetsIndex
+    type: bin
+    dir: assets/sprites/effects/sparklers
+    extract: false
+    start: 0xCC0220
+
+  - name: chimneySmokeTexture
+    type: bin
+    dir: assets/sprites/effects/chimneySmoke
+    extract: false
+    start: 0xCC0240
+
+  - name: chimneySmokeAssetsIndex
+    type: bin
+    dir: assets/sprites/effects/chimneySmoke
+    extract: false
+    start: 0xCC1BB0
+
+  - name: balloonsTexture
+    type: bin
+    dir: assets/sprites/effects/balloons
+    extract: false
+    start: 0xCC1BD0
+
+  - name: balloonsAssetsIndex
+    type: bin
+    dir: assets/sprites/effects/balloons
+    extract: false
+    start: 0xCC2670
+
+  - name: smallCloudTexture
+    type: bin
+    dir: assets/sprites/effects/smallCloud
+    extract: false
+    start: 0xCC2690
+
+  - name: smallCloudAssetsIndex
+    type: bin
+    dir: assets/sprites/effects/smallCloud
+    extract: false
+    start: 0xCC3A50
+
+  - name: fairiesTexture
+    type: bin
+    dir: assets/sprites/effects/fairies
+    extract: false
+    start: 0xCC3A70
+
+  - name: fairiesAssetsIndex
+    type: bin
+    dir: assets/sprites/effects/fairies
+    extract: false
+    start: 0xCC4600
+
+  - name: firefliesTexture
+    type: bin
+    dir: assets/sprites/effects/fireflies
+    extract: false
+    start: 0xCC4620
+
+  - name: firefliesAssetsIndex
+    type: bin
+    dir: assets/sprites/misc/fireflies
+    extract: false
+    start: 0xCC5C90
+
+  - name: bulletBlinkingTexture
+    type: bin
+    dir: assets/sprites/overlayScreens/bulletBlinking
+    extract: false
+    start: 0xCC5CB0
+
+  - name: bulletBlinkingAssetsIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/bulletBlinking
+    extract: false
+    start: 0xCC65E0
+
+  - name: bulletNumeralTexture
+    type: bin
+    dir: assets/sprites/overlayScreens/bulletNumeral
+    extract: false
+    start: 0xCC6600
+
+  - name: bulletNumeralAssetsIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/bulletNumeral
+    extract: false
+    start: 0xCC6D20
+
+  - name: checkerboardBackgroundTexture
+    type: bin
+    dir: assets/sprites/overlayScreens/checkerboardBackground
+    extract: false
+    start: 0xCC6D40
+
+  - name: checkerboardBackgroundAssetsIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/checkerboardBackground
+    extract: false
+    start: 0xCC9330
+
+  - name: emptyOverlayScreen2Texture
+    type: bin
+    dir: assets/sprites/overlayScreens
+    start: 0xCC9350
+
+  - name: emptyOverlayScreen3Texture
+    type: bin
+    dir: assets/sprites/overlayScreens
+    start: 0xCC9370
+
+  - name: namingScreenBackgroundTexture
+    type: bin
+    dir: assets/sprites/overlayScreens/namingScreenBackground
+    extract: false
+    start: 0xCC9390
+
+  - name: namingScreenBackgroundAssetsIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/namingScreenBackground
+    extract: false
+    start: 0xCCB980
+
+  - name: bookTexture
+    type: bin
+    dir: assets/sprites/overlayScreens/book
+    extract: false
+    start: 0xCCB9A0
+
+  - name: bookAssetsIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/book
+    extract: false
+    start: 0xCD1100
+
+  - name: photoSmallTexture
+    type: bin
+    dir: assets/sprites/overlayScreens/photoSmall
+    extract: false
+    start: 0xCD1120
+
+  - name: photoSmallAssetsIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/photoSmall
+    extract: false
+    start: 0xCD58D0
+
+  - name: photoLargeTexture
+    type: bin
+    dir: assets/sprites/overlayScreens/photoLarge
+    extract: false
+    start: 0xCD58F0
+
+  - name: photoLargeAssetsIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/photoLarge
+    extract: false
+    start: 0xCDAE90
+
+  - name: namingScreen1Texture
+    type: bin
+    dir: assets/sprites/overlayScreens/namingScreen1
+    extract: false
+    start: 0xCDAEB0
+
+  - name: namingScreen1AssetsIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/namingScreen1
+    extract: false
+    start: 0xCDE2C0
+
+  - name: calendarTexture
+    type: bin
+    dir: assets/sprites/overlayScreens/calendar
+    extract: false
+    start: 0xCDE2E0
+
+  - name: calendarAssetsIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/calendar
+    extract: false
+    start: 0xCED610
+
+  - name: calenderJapanTexture
+    type: bin
+    dir: assets/sprites/overlayScreens/calenderJapan
+    extract: false
+    start: 0xCED630
+
+  - name: calenderJapanAssetsIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/calenderJapan
+    extract: false
+    start: 0xCF1020
+
+  - name: bookScreenLabelsTexture
+    type: bin
+    dir: assets/sprites/overlayScreens/bookScreenLabels
+    extract: false
+    start: 0xCF1040
+
+  - name: bookScreenLabelsAssetsIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/bookScreenLabels
+    extract: false
+    start: 0xCF2840
+
+  - name: japaneseCharacterSelectTexture
+    type: bin
+    dir: assets/sprites/overlayScreens/japaneseCharacterSelect
+    extract: false
+    start: 0xCF2860
+
+  - name: japaneseCharacterSelectAssetsIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/japaneseCharacterSelect
+    extract: false
+    start: 0xCF4530
+
+  - name: overlayScreenNamesTexture
+    type: bin
+    dir: assets/sprites/overlayScreens/overlayScreenNames
+    extract: false
+    start: 0xCF4550
+
+  - name: overlayScreenNamesAssetsIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/overlayScreenNames
+    extract: false
+    start: 0xCFE5F0
+
+  - name: moneyTexture
+    type: bin
+    dir: assets/sprites/overlayScreens/money
+    extract: false
+    start: 0xCFE610
+
+  - name: moneyAssetsIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/money
+    extract: false
+    start: 0xCFF6F0
+
+  - name: powerNutTreeDrawingTexture
+    type: bin
+    dir: assets/sprites/overlayScreens/powerNutTreeDrawing
+    extract: false
+    start: 0xCFF710
+
+  - name: powerNutTreeDrawingAssetsIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/powerNutTreeDrawing
+    extract: false
+    start: 0xD057F0
+
+  - name: inventoryScreenTexture
+    type: bin
+    dir: assets/sprites/overlayScreens/inventoryScreen
+    extract: false
+    start: 0xD05810
+
+  - name: inventoryScreenAssetsIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/inventoryScreen
+    extract: false
+    start: 0xD0C8A0
+
+  - name: prizeScreenTexture
+    type: bin
+    dir: assets/sprites/overlayScreens/prizeScreen
+    extract: false
+    start: 0xD0C8C0
+
+  - name: prizeScreenAssetsIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/prizeScreen
+    extract: false
+    start: 0xD13AC0
+
+  - name: loadGameScreenTexture
+    type: bin
+    dir: assets/sprites/overlayScreens/loadGameScreen
+    extract: false
+    start: 0xD13AE0
+
+  - name: loadGameScreenAssetsIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/loadGameScreen
+    extract: false
+    start: 0xD1B4E0
+
+  - name: messageBoxTexture
+    type: bin
+    dir: assets/sprites/overlayScreens/messageBox
+    extract: false
+    start: 0xD1B500
+
+  - name: messageBoxAssetsIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/messageBox
+    extract: false
+    start: 0xD1DDE0
+
+  - name: namingScreen2Texture
+    type: bin
+    dir: assets/sprites/overlayScreens/namingScreen2
+    extract: false
+    start: 0xD1DE00
+
+  - name: namingScreen2AssetsIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/namingScreen2
+    extract: false
+    start: 0xD2D600
+
+  - name: estimateScreenTexture
+    type: bin
+    dir: assets/sprites/overlayScreens/estimateScreen
+    extract: false
+    start: 0xD2D620
+
+  - name: estimateScreenAssetsIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/estimateScreen
+    extract: false
+    start: 0xD2EBA0
+
+  - name: raceBettingUITexture
+    type: bin
+    dir: assets/sprites/overlayScreens/raceBettingUI
+    extract: false
+    start: 0xD2EBC0
+
+  - name: raceBettingUIAssetsIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/raceBettingUI
+    extract: false
+    start: 0xD35A50
+
+  - name: emptyOverlayScreen4Texture
+    type: bin
+    dir: assets/sprites/overlayScreens
+    start: 0xD35A70
+
+  - name: timeUITexture
+    type: bin
+    dir: assets/sprites/overlayScreens/timeUI
+    extract: false
+    start: 0xD35A90
+
+  - name: timeUIAssetsIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/timeUI
+    extract: false
+    start: 0xD38A20
+
+  - name: houseExtensionSelectionTexture
+    type: bin
+    dir: assets/sprites/overlayScreens/houseExtensionSelection
+    extract: false
+    start: 0xD38A40
+
+  - name: houseExtensionSelectionAssetsIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/houseExtensionSelection
+    extract: false
+    start: 0xD3BFC0
+
+  - name: shopIconsTexture
+    type: bin
+    dir: assets/sprites/overlayScreens/shopIcons
+    extract: false
+    start: 0xD3BFE0
+
+  - name: shopIconsAssetsIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/shopIcons
+    extract: false
+    start: 0xD3DCC0
+
+  - name: rankingsTexture
+    type: bin
+    dir: assets/sprites/overlayScreens/rankings
+    extract: false
+    start: 0xD3DCE0
+
+  - name: rankingsAssetsIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/rankings
+    extract: false
+    start: 0xD451D0
+
+  - name: guidebookTexture
+    type: bin
+    dir: assets/sprites/overlayScreens/guidebook
+    extract: false
+    start: 0xD451F0
+
+  - name: guidebookAssetsIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/guidebook
+    extract: false
+    start: 0xD47EE0
+
+  - name: dialogueButtonIconsTexture
+    type: bin
+    dir: assets/sprites/overlayScreens/dialogueButtonIcons
+    extract: false
+    start: 0xD47F00
+
+  - name: dialogueButtonIconsAssetsIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/dialogueButtonIcons
+    extract: false
+    start: 0xD49B80
+
+  - name: tvContentTexture
+    type: bin
+    dir: assets/sprites/overlayScreens/tvContent
+    extract: false
+    start: 0xD49BA0
+
+  - name: tvContentAssetsIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/tvContent
+    extract: false
+    start: 0xD4D9F0
+
+  - name: tvContentSpritesheetIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/tvContent
+    extract: false
+    start: 0xD4DA10
+
+  - name: toolsTexture
+    type: bin
+    dir: assets/sprites/overlayScreens/tools
+    extract: false
+    start: 0xD4DAB0
+
+  - name: toolsAssetsIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/tools
+    extract: false
+    start: 0xD52590
+
+  - name: toolsSpritesheetIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/tools
+    extract: false
+    start: 0xD525B0
+
+  - name: holdableItemsTexture
+    type: bin
+    dir: assets/sprites/overlayScreens/holdableItems
+    extract: false
+    start: 0xD52670
+
+  - name: holdableItemsAssetsIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/holdableItems
+    extract: false
+    start: 0xD82FD0
+
+  - name: holdableItemsSpritesheetIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/holdableItems
+    extract: false
+    start: 0xD82FF0
+
+  - name: extraFestivalTexture
+    type: bin
+    dir: assets/sprites/overlayScreens/extraFestival
+    extract: false
+    start: 0xD835A0
+
+  - name: extraFestivalAssetsIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/extraFestival
+    extract: false
+    start: 0xD86D40
+
+  - name: extraFestivalSpritesheetIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/extraFestival
+    extract: false
+    start: 0xD86D60
+
+  - name: homeItemsTexture
+    type: bin
+    dir: assets/sprites/overlayScreens/homeItems
+    extract: false
+    start: 0xD86D90
+
+  - name: homeItemsAssetsIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/homeItems
+    extract: false
+    start: 0xD8B140
+
+  - name: homeItemsSpritesheetIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/homeItems
+    extract: false
+    start: 0xD8B160
+
+  - name: groundObjectsTexture
+    type: bin
+    dir: assets/sprites/overlayScreens/groundObjects
+    extract: false
+    start: 0xD8B1D0
+
+  - name: groundObjectsAssetsIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/groundObjects
+    extract: false
+    start: 0xD92950
+
+  - name: rainTexture
+    type: bin
+    dir: assets/sprites/overlayScreens/rain
+    extract: false
+    start: 0xD92970
+
+  - name: rainAssetsIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/rain
+    extract: false
+    start: 0xD92D50
+
+  # ci4 (same as ci8 layout)
+  #   sprite array
+  #     header
+  #     dimensions, 48 x 46
+  #     texture
+  - name: characterAvatarsTexture
+    type: bin
+    dir: assets/sprites/overlayScreens/characterAvatars
+    extract: false
+    start: 0xD92D70
+
+  - name: characterAvatarsAssetsIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/characterAvatars
+    extract: false
+    start: 0xDB9EA0
+
+  - name: characterAvatarsSpritesheetIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/characterAvatars
+    extract: false
+    start: 0xDB9EC0
+
+  - name: titleSpritesTexture
+    type: bin
+    dir: assets/sprites/overlayScreens/titleSprites
+    extract: false
+    start: 0xDBA100
+
+  - name: titleSpritesAssetsIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/titleSprites
+    extract: false
+    start: 0xDD38F0
+
+  - name: controllerIconsTexture
+    type: bin
+    dir: assets/sprites/overlayScreens/controllerIcons
+    extract: false
+    start: 0xDD3910
+
+  - name: controllerIconsAssetsIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/controllerIcons
+    extract: false
+    start: 0xDD47E0
+
+  - name: logosTexture
+    type: bin
+    dir: assets/sprites/overlayScreens/logos
+    extract: false
+    start: 0xDD4800
+
+  - name: logosAssetsIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/logos
+    extract: false
+    start: 0xDD7750
+
+  - name: creditsTexture
+    type: bin
+    dir: assets/sprites/overlayScreens/credits
+    extract: false
+    start: 0xDD7770
+
+  - name: creditsAssetsIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/credits
+    extract: false
+    start: 0xDE3370
+
+  - name: albumPhotosTexture
+    type: bin
+    dir: assets/sprites/overlayScreens/albumPhotos
+    extract: false
+    start: 0xDE3390
+
+  - name: albumPhotosAssetsIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/albumPhotos
+    extract: false
+    start: 0xE087B0
+
+  - name: albumPhotosSpritesheetIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/albumPhotos
+    extract: false
+    start: 0xE087D0
+
+  # cut from NA release
+  - name: villageMapScreenTexture
+    type: bin
+    dir: assets/sprites/overlayScreens/map
+    start: 0xE08850
+
+  - name: villageMapScreenAssetsIndex
+    type: bin
+    dir: assets/sprites/overlayScreens/map
+    start: 0xE08860
+
+  # font
+
+  - name: fontTexture
+    type: bin
+    dir: assets/font
+    extract: false
+    start: 0xE08870
+
+  - name: fontPalette1
+    type: bin
+    dir: assets/font
+    extract: false
+    start: 0xE13770
+
+  - name: fontPalette2
+    type: bin
+    dir: assets/font
+    extract: false
+    start: 0xE137A0
+
+  - name: fontPalette3
+    type: bin
+    dir: assets/font
+    extract: false
+    start: 0xE137D0
+
+  # texts
+
+  - name: text1Text
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE13800
+
+  - name: text1TextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE13920
+
+  - name: libraryText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE13990
+
+  - name: libraryTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE13C30
+
+  - name: diaryText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE13C60
+
+  - name: diaryTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE167C0
+
+  - name: recipesJapaneseText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE16A90
+
+  - name: recipesJapaneseTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE19F60
+
+  - name: festivalOverlaySelectionsText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE19FF0
+
+  - name: festivalOverlaySelectionsTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE1B3A0
+
+  - name: lettersText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE1B4E0
+
+  - name: lettersTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE1C8C0
+
+  - name: shopText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE1C9C0
+
+  - name: shopTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE21150
+
+  - name: animalInteractionsText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE21700
+
+  - name: animalInteractionsTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE218A0
+
+  - name: tvText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE218D0
+
+  - name: tvTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE24E20
+
+  - name: text10Text
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE24F60
+
+  - name: text10TextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE24F70
+
+  - name: namingScreenText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE24F80
+
+  - name: namingScreenTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE25170
+
+  - name: elliText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE251D0
+
+  - name: elliTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE28460
+
+  - name: kaiText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE28720
+
+  - name: kaiTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE2A230
+
+  - name: karenText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE2A380
+
+  - name: karenTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE2D080
+
+  - name: gotzText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE2D330
+
+  - name: gotzTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE2E500
+
+  - name: sashaText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE2E600
+
+  - name: sashaTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE2F650
+
+  - name: cliffText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE2F730
+
+  - name: cliffTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE30ED0
+
+  - name: jeffText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE31010
+
+  - name: jeffTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE33020
+
+  - name: kentText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE33190
+
+  - name: kentTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE34650
+
+  - name: harrisText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE34790
+
+  - name: harrisTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE36000
+
+  - name: popuriText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE36150
+
+  - name: popuriTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE39360
+
+  - name: mariaText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE39610
+
+  - name: mariaTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE3C700
+
+  - name: mayText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE3C9A0
+
+  - name: mayTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE3D600
+
+  - name: annText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE3D6D0
+
+  - name: annTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE40B90
+
+  - name: dougText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE40E50
+
+  - name: dougTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE42010
+
+  - name: grayText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE42100
+
+  - name: grayTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE42D50
+
+  - name: basilText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE42E60
+
+  - name: basilTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE43E80
+
+  - name: lilliaText
+    type: bin
+    extract: false
+    dir: text
+    start: 0xE43F60
+
+  - name: lilliaTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE45130
+
+  - name: dukeText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE45200
+
+  - name: dukeTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE461C0
+
+  - name: shipperText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE46280
+
+  - name: shipperTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE47140
+
+  - name: harvestSpritesText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE471E0
+
+  - name: harvestSpritesTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE485D0
+
+  - name: assistantCarpentersText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE48720
+
+  - name: assistantCarpentersTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE49480
+
+  - name: masterCarpenterText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE49540
+
+  - name: masterCarpenterTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE4A230
+
+  - name: mayorText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE4A2D0
+
+  - name: mayorTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE4B6E0
+
+  - name: gregText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE4B7D0
+
+  - name: gregTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE4C8D0
+
+  - name: rickText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE4C9B0
+
+  - name: rickTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE4E230
+
+  - name: barleyText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE4E320
+
+  - name: barleyTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE4EC70
+
+  - name: sydneyText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE4ED10
+
+  - name: sydneyTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE4F370
+
+  - name: potionShopDealerText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE4F3F0
+
+  - name: potionShopDealerTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE50520
+
+  - name: mayorWifeText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE50600
+
+  - name: mayorWifeTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE51A00
+
+  - name: ellenText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE51AE0
+
+  - name: ellenTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE52740
+
+  - name: stuText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE527E0
+
+  - name: stuTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE53450
+
+  - name: midwifeText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE53540
+
+  - name: midwifeTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE54C60
+
+  - name: pastorText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE54D60
+
+  - name: pastorTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE55AE0
+
+  - name: saibaraText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE55BA0
+
+  - name: saibaraTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE569C0
+
+  - name: cutscenes1Text
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE56A80
+
+  - name: cutscenes1TextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE58010
+
+  - name: funeralIntroText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE58160
+
+  - name: funeralIntroTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE583C0
+
+  - name: text48Text
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE583F0
+
+  - name: text48TextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE58880
+
+  - name: text49Text
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE588D0
+
+  - name: text49TextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE5A6D0
+
+  - name: text50Text
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE5A8C0
+
+  - name: text50TextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE5D240
+
+  - name: text51Text
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE5D4C0
+
+  - name: text51TextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE5E270
+
+  - name: text52Text
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE5E340
+
+  - name: text52TextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE5F220
+
+  - name: dogRaceText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE5F300
+
+  - name: dogRaceTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE60080
+
+  - name: text54Text
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE60170
+
+  - name: text54TextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE64680
+
+  - name: text55Text
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE64AF0
+
+  - name: text55TextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE66260
+
+  - name: text56Text
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE663F0
+
+  - name: text56TextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE677B0
+
+  - name: newYearFestivalText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE678E0
+
+  - name: newYearFestivalTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE68620
+
+  - name: spiritFestivalText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE68700
+
+  - name: spiritFestivalTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE68BA0
+
+  - name: horseRaceText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE68BF0
+
+  - name: horseRaceTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE6ADC0
+
+  - name: marriedDialoguesText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE6AFE0
+
+  - name: marriedDialoguesTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE6F1E0
+
+  - name: text61Text
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE6F5C0
+
+  - name: text61TextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE714D0
+
+  - name: vineyardCutscenesText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE71690
+
+  - name: vineyardCutscenesTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE72680
+
+  - name: text63Text
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE72780
+
+  - name: text63TextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE73070
+
+  - name: farmVisitsText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE73110
+
+  - name: farmVisitsTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE7C7B0
+
+  - name: text65Text
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE7D1E0
+
+  - name: text65TextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE81660
+
+  - name: eggFestivalText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE81F50
+
+  - name: eggFestivalTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE82B30
+
+  - name: beachCutscenesText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE82C40
+
+  - name: beachCutscenesTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE83880
+
+  - name: vegetableFestivalText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE83960
+
+  - name: vegetableFestivalTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE84690
+
+  - name: babyText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE84760
+
+  - name: babyTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE84910
+
+  - name: mrsManaAndJohnText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE84990
+
+  - name: mrsManaAndJohnTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE84F50
+
+  - name: additionalNpcsText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE84FD0
+
+  - name: additionalNpcsTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE85730
+
+  - name: howToPlayText
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE857A0
+
+  - name: howToPlayTextIndex
+    type: bin
+    dir: text
+    extract: false
+    start: 0xE87080
+
+  # dialogue bytecode
+
+  - name: text1Dialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE871A0
+
+  - name: text1DialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE871B0
+
+  - name: diaryDialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE871C0
+
+  - name: diaryDialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE872C0
+
+  - name: elliDialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE87320
+
+  - name: elliDialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE87BB0
+
+  - name: kaiDialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE87CE0
+
+  - name: kaiDialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE88190
+
+  - name: karenDialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE88240
+
+  - name: karenDialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE88B20
+
+  - name: cliffDialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE88C60
+
+  - name: cliffDialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE89070
+
+  - name: jeffDialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE89120
+
+  - name: jeffDialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE89600
+
+  - name: harrisDialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE896B0
+
+  - name: harrisDialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE89B60
+
+  - name: popuriDialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE89C00
+
+  - name: popuriDialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE8A460
+
+  - name: mariaDialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE8A590
+
+  - name: mariaDialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE8AE00
+
+  - name: annDialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE8AF30
+
+  - name: annDialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE8B7A0
+
+  - name: grayDialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE8B8F0
+
+  - name: grayDialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE8BCE0
+
+  - name: ellenDialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE8BD80
+
+  - name: ellenDialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE8C000
+
+  - name: gotzDialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE8C070
+
+  - name: gotzDialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE8C400
+
+  - name: sashaDialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE8C480
+
+  - name: sashaDialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE8C750
+
+  - name: kentDialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE8C7D0
+
+  - name: kentDialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE8CBA0
+
+  - name: mayDialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE8CC40
+
+  - name: mayDialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE8CF90
+
+  - name: stuDialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE8D010
+
+  - name: stuDialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE8D3F0
+
+  - name: dougDialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE8D470
+
+  - name: dougDialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE8D7B0
+
+  - name: basilDialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE8D830
+
+  - name: basilDialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE8DA90
+
+  - name: lilliaDialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE8DB00
+
+  - name: lilliaDialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE8DDF0
+
+  - name: saibaraDialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE8DE60
+
+  - name: saibaraDialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE8E0E0
+
+  - name: midwifeDialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE8E160
+
+  - name: midwifeDialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE8E490
+
+  - name: dukeDialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE8E520
+
+  - name: dukeDialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE8E780
+
+  - name: shipperDialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE8E7F0
+
+  - name: shipperDialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE8EAC0
+
+  - name: harvestSprites1Dialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE8EB30
+
+  - name: harvestSprites1DialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE8EE50
+
+  - name: harvestSprites2Dialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE8EEC0
+
+  - name: harvestSprites2DialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE8F1E0
+
+  - name: harvestSprites3Dialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE8F250
+
+  - name: harvestSprites3DialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE8F550
+
+  - name: assistantCarpenters1Dialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE8F5C0
+
+  - name: assistantCarpenters1DialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE8F7A0
+
+  - name: assistantCarpenters2Dialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE8F810
+
+  - name: assistantCarpenters2DialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE8FA00
+
+  - name: masterCarpenterDialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE8FA70
+
+  - name: masterCarpenterDialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE8FC90
+
+  - name: mayorDialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE8FD00
+
+  - name: mayorDialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE90000
+
+  - name: gregDialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE90080
+
+  - name: gregDialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE903D0
+
+  - name: rickDialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE90460
+
+  - name: rickDialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE90810
+
+  - name: barleyDialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE90890
+
+  - name: barleyDialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE90B00
+
+  - name: sydneyDialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE90B70
+
+  - name: sydneyDialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE90DD0
+
+  - name: mayorWifeDialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE90E40
+
+  - name: mayorWifeDialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE91210
+
+  - name: pastorDialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE91290
+
+  - name: pastorDialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE914C0
+
+  - name: potionShopDealerDialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE91520
+
+  - name: potionShopDealerDialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE917E0
+
+  - name: cutscenes1Dialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE91860
+
+  - name: cutscenes1DialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE918A0
+
+  - name: text48Dialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE918D0
+
+  - name: text48DialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE91900
+
+  - name: text49Dialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE91920
+
+  - name: text49DialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE91970
+
+  - name: text50Dialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE919A0
+
+  - name: text50DialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE91A50
+
+  - name: text51Dialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE91AB0
+
+  - name: text51DialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE91AD0
+
+  - name: text52Dialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE91AE0
+
+  - name: text52DialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE91B50
+
+  - name: dogRaceDialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE91B80
+
+  - name: dogRaceDialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE91B90
+
+  - name: vegetableFestivalDialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE91BA0
+
+  - name: vegetableFestivalDialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE91BF0
+
+  - name: text54Dialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE91C20
+
+  - name: text54DialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE91CE0
+
+  - name: text55Dialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE91D30
+
+  - name: text55DialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE91DC0
+
+  - name: text56Dialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE91E00
+
+  - name: text56DialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE91EF0
+
+  - name: horseRaceDialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE91F60
+
+  - name: horseRaceDialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE91F90
+
+  - name: vineyardCutscenesDialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE91FB0
+
+  - name: vineyardCutscenesDialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE91FF0
+
+  - name: text63Dialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE92010
+
+  - name: text63DialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE92030
+
+  - name: farmVisitsDialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE92040
+
+  - name: farmVisitsDialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE92180
+
+  - name: text65Dialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE92220
+
+  - name: text65DialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE922E0
+
+  - name: eggFestivalDialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE92370
+
+  - name: eggFestivalDialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE92380
+
+  - name: marriedDialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE92390
+
+  - name: marriedDialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE924A0
+
+  - name: text61Dialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE92520
+
+  - name: text61DialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE92550
+
+  - name: namingScreenDialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE92570
+
+  - name: namingScreenDialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE925B0
+
+  - name: newYearFestivalDialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE925F0
+
+  - name: newYearFestivalDialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE92600
+
+  - name: beachCutscenesDialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE92610
+
+  - name: beachCutscenesDialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE92630
+
+  - name: shopDialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE92640
+
+  - name: shopDialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE92800
+
+  - name: festivalOverlaySelectionsDialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE928B0
+
+  - name: festivalOverlaySelectionsDialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE92910
+
+  - name: babyDialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE92950
+
+  - name: babyDialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE92B40
+
+  - name: mrsManaAndJohn1Dialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE92B90
+
+  - name: mrsManaAndJohn1DialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE92C50
+
+  - name: mrsManaAndJohn2Dialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE92C70
+
+  - name: mrsManaAndJohn2DialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE92DB0
+
+  - name: additionalNpcs1Dialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE92DE0
+
+  - name: additionalNpcs1DialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE92E90
+
+  - name: npcBabyDialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE92EC0
+
+  - name: npcBabyDialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE92EE0
+
+  - name: libraryDialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE92EF0
+
+  - name: libraryDialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE92F90
+
+  - name: additionalNpcs2Dialogue
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE92FF0
+
+  - name: additionalNpcs2DialogueIndex
+    type: bin
+    dir: dialogues/bytecode
+    extract: false
+    start: 0xE93060
+
+  # audio
+
+  - name: waveTablePointer
+    type: bin
+    dir: audio
+    start: 0xE93080
+
+  - name: waveTableData
+    dir: audio
+    type: bin
+    start: 0xE99910
+
+  # music
+  - name: opening
+    type: seq
+    dir: audio/sequences
+    start: 0xFD8510
+
+  - name: title
+    type: seq
+    dir: audio/sequences
+    start: 0xFDAD00
+
+  - name: sportsFestival1
+    type: seq
+    dir: audio/sequences
+    start: 0xFDD6C0
+
+  - name: goodbye
+    type: seq
+    dir: audio/sequences
+    start: 0xFDFB50
+
+  - name: spring
+    type: seq
+    dir: audio/sequences
+    start: 0xFE12F0
+
+  - name: summer
+    type: seq
+    dir: audio/sequences
+    start: 0xFE27B0
+
+  - name: autumn
+    type: seq
+    dir: audio/sequences
+    start: 0xFE4D20
+
+  - name: winter
+    type: seq
+    dir: audio/sequences
+    start: 0xFE5E50
+
+  - name: namingScreen
+    type: seq
+    dir: audio/sequences
+    start: 0xFE6E60
+
+  - name: festivalTheme
+    type: seq
+    dir: audio/sequences
+    start: 0xFE7E00
+
+  - name: sportsFestival2
+    type: seq
+    dir: audio/sequences
+    start: 0xFE9040
+
+  - name: spiritFestivalTheme
+    type: seq
+    dir: audio/sequences
+    start: 0xFEAB70
+
+  - name: dogRaceTheme
+    type: seq
+    dir: audio/sequences
+    start: 0xFEB8F0
+
+  - name: racingFestival
+    type: seq
+    dir: audio/sequences
+    start: 0xFED5F0
+
+  - name: festivalDance
+    type: seq
+    dir: audio/sequences
+    start: 0xFEEA40
+
+  - name: mountain
+    type: seq
+    dir: audio/sequences
+    start: 0xFEF9F0
+
+  - name: village
+    type: seq
+    dir: audio/sequences
+    start: 0xFF1CD0
+
+  - name: pond
+    type: seq
+    dir: audio/sequences
+    start: 0xFF3760
+
+  - name: church
+    type: seq
+    dir: audio/sequences
+    start: 0xFF4160
+
+  - name: tavern
+    type: seq
+    dir: audio/sequences
+    start: 0xFF4750
+
+  - name: wedding
+    type: seq
+    dir: audio/sequences
+    start: 0xFF6300
+
+  - name: newYearSunrise
+    type: seq
+    dir: audio/sequences
+    start: 0xFF6ED0
+
+  - name: credits
+    type: seq
+    dir: audio/sequences
+    start: 0xFF7D80
+
+  - name: brokenMusicBox
+    type: seq
+    dir: audio/sequences
+    start: 0xFF9370
+
+  - name: musicBox
+    type: seq
+    dir: audio/sequences
+    start: 0xFF95A0
+
+  - name: flutePerformance
+    type: seq
+    dir: audio/sequences
+    start: 0xFF9840
+
+  - name: organPerformance
+    type: seq
+    dir: audio/sequences
+    start: 0xFF99F0
+
+  - name: ocarinaPerformance
+    type: seq
+    dir: audio/sequences
+    start: 0xFF9BC0
+
+  - name: sleighBells
+    type: seq
+    dir: audio/sequences
+    start: 0xFF9DC0
+
+  - name: badEnding
+    type: seq
+    dir: audio/sequences
+    start: 0xFF9F40
+
+  - name: vocalPerformance
+    type: seq
+    dir: audio/sequences
+    start: 0xFFA7B0
+
+  - name: ensemblePerformance
+    type: seq
+    dir: audio/sequences
+    start: 0xFFA950
+
+  - name: drumPerformance
+    type: seq
+    dir: audio/sequences
+    start: 0xFFAF80
+
+  - name: typhoonAmbience1
+    type: seq
+    dir: audio/sequences
+    start: 0xFFB090
+
+  - name: typhoonAmbience2
+    type: seq
+    dir: audio/sequences
+    start: 0xFFB700
+
+  - name: nightAmbienceSpring
+    type: seq
+    dir: audio/sequences
+    start: 0xFFC530
+
+  - name: nightAmbienceSummer
+    type: seq
+    dir: audio/sequences
+    start: 0xFFC9F0
+
+  - name: nightAmbienceAutumn
+    type: seq
+    dir: audio/sequences
+    start: 0xFFCC40
+
+  - name: starryNightFestival
+    type: seq
+    dir: audio/sequences
+    start: 0xFFCE10
+
+  - name: beachAmbience1
+    type: seq
+    dir: audio/sequences
+    start: 0xFFD490
+
+  - name: beachAmbience2
+    type: seq
+    dir: audio/sequences
+    start: 0xFFD680
+
+  # sfx
+  - name: bird1
+    type: seq
+    dir: audio/sequences
+    start: 0xFFD820
+
+  - name: bird2
+    type: seq
+    dir: audio/sequences
+    start: 0xFFD920
+
+  - name: seq44
+    type: seq
+    dir: audio/sequences
+    start: 0xFFDA20
+
+  - name: cicada
+    type: seq
+    dir: audio/sequences
+    start: 0xFFDA30
+
+  - name: seq46
+    type: seq
+    dir: audio/sequences
+    start: 0xFFDB80
+
+  - name: seq47
+    type: seq
+    dir: audio/sequences
+    start: 0xFFDBA0
+
+  - name: seq48
+    type: seq
+    dir: audio/sequences
+    start: 0xFFDCD0
+
+  - name: fireworksSfx
+    type: seq
+    dir: audio/sequences
+    start: 0xFFDCF0
+
+  - name: seq50
+    type: seq
+    dir: audio/sequences
+    start: 0xFFDEE0
+
+  - name: horseGallopFast
+    type: seq
+    dir: audio/sequences
+    start: 0xFFDEF0
+
+  - name: horseGallop1
+    type: seq
+    dir: audio/sequences
+    start: 0xFFE520
+
+  - name: horseGallop2
+    type: seq
+    dir: audio/sequences
+    start: 0xFFE620
+
+  - name: horseGallop3
+    type: seq
+    dir: audio/sequences
+    start: 0xFFE720
+
+  - name: water1
+    type: seq
+    dir: audio/sequences
+    start: 0xFFE820
+
+  - name: water2
+    type: seq
+    dir: audio/sequences
+    start: 0xFFE920
+
+  - name: hammer
+    type: seq
+    dir: audio/sequences
+    start: 0xFFEA30
+
+  - name: seq58
+    type: seq
+    dir: audio/sequences
+    start: 0xFFEB30
+
+  - name: seq59
+    type: seq
+    dir: audio/sequences
+    start: 0xFFEC30
+
+  - name: seq60
+    type: seq
+    dir: audio/sequences
+    start: 0xFFED40
+
+  # blue feather/animal medicine
+  - name: shimmer
+    type: seq
+    dir: audio/sequences
+    start: 0xFFEE40
+
+  - name: seeds
+    type: seq
+    dir: audio/sequences
+    start: 0xFFEF50
+
+  - name: cowBell
+    type: seq
+    dir: audio/sequences
+    start: 0xFFF070
+
+  # unused engine sfx?
+  - name: seq64
+    type: seq
+    dir: audio/sequences
+    start: 0xFFF180
+
+  - name: sickle
+    type: seq
+    dir: audio/sequences
+    start: 0xFFF350
+
+  - name: hoe
+    type: seq
+    dir: audio/sequences
+    start: 0xFFF470
+
+  - name: fanfare
+    type: seq
+    dir: audio/sequences
+    start: 0xFFF580
+
+  - name: padding
+    type: bin
+    extract: false
+    start: 0xFFF700
+    
+  - [0x1000000]

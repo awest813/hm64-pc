@@ -1,0 +1,18 @@
+binutils-mips-linux-gnu binary: package-name-doesnt-match-sonames
+binutils-mips-linux-gnu binary: non-standard-dir-in-usr
+
+# needed for kfreebsd and the hurd
+binutils-mips-linux-gnu binary: file-in-unusual-dir
+
+# internal libs, with the target name encoded
+binutils-mips-linux-gnu binary: no-shlibs-control-file
+
+# yes, intended
+binutils-mips-linux-gnu binary: shlib-in-multi-arch-foreign-package
+binutils-mips-linux-gnu binary: triplet-dir-and-architecture-mismatch
+
+# some triplets are long ...
+binutils-mips-linux-gnu binary: extended-description-line-too-long
+
+# yes, libctf libs intended here
+binutils-mips-linux-gnu binary: link-to-shared-library-in-wrong-package

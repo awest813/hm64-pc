@@ -1,0 +1,393 @@
+
+#ifndef _MAP_INDICES_H_
+#define _MAP_INDICES_H_
+
+#define TOTAL_MAPS 96
+
+#define RANCH 0
+#define RANCH_SPRING 0
+#define RANCH_SUMMER 1
+#define RANCH_AUTUMN 2
+#define RANCH_WINTER 3
+#define ANN_ROOM 4
+#define RANCH_BARN 5
+#define RANCH_STORE 6
+#define RANCH_HOUSE 7
+#define EMPTY_MAP_1 8
+#define BEACH 9
+#define BEACH_SPRING 9
+#define BEACH_SUMMER 10
+#define BEACH_AUTUMN 11
+#define BEACH_WINTER 12
+#define RACE_TRACK 13
+#define RACE_TRACK_SPRING 13
+#define RACE_TRACK_SUMMER 14
+#define RACE_TRACK_AUTUMN 15
+#define RACE_TRACK_WINTER 16
+#define MOUNTAIN_1 17
+#define MOUNTAIN_1_SPRING 17
+#define MOUNTAIN_1_SUMMER 18
+#define MOUNTAIN_1_AUTUMN 19
+#define MOUNTAIN_1_WINTER 20
+#define MOUNTAIN_2 21
+#define MOUNTAIN_2_SPRING 21
+#define MOUNTAIN_2_SUMMER 22
+#define MOUNTAIN_2_AUTUMN 23
+#define MOUNTAIN_2_WINTER 24
+#define TOP_OF_MOUNTAIN_1 25
+#define TOP_OF_MOUNTAIN_1_SPRING 25
+#define TOP_OF_MOUNTAIN_1_SUMMER 26
+#define TOP_OF_MOUNTAIN_1_AUTUMN 27
+#define TOP_OF_MOUNTAIN_1_WINTER 28
+#define MOON_MOUNTAIN 29
+#define MOON_MOUNTAIN_SPRING 29
+#define MOON_MOUNTAIN_SUMMER 30
+#define MOON_MOUNTAIN_AUTUMN 31
+#define MOON_MOUNTAIN_WINTER 32
+#define CARPENTER_HUT 33
+#define DUMPLING_HOUSE 34
+#define POND 35
+#define POND_SPRING 35
+#define POND_SUMMER 36
+#define POND_AUTUMN 37
+#define POND_WINTER 38
+#define ELLI_ROOM 39
+#define BAKERY 40
+#define VILLAGE_1 41
+#define VILLAGE_1_SPRING 41
+#define VILLAGE_1_SUMMER 42
+#define VILLAGE_1_AUTUMN 43
+#define VILLAGE_1_WINTER 44
+#define VILLAGE_2 45
+#define VILLAGE_2_SPRING 45
+#define VILLAGE_2_SUMMER 46
+#define VILLAGE_2_AUTUMN 47
+#define VILLAGE_2_WINTER 48
+#define POPURI_ROOM 49
+#define FLOWER_SHOP 50
+#define CHURCH 51
+#define SOUVENIR_SHOP 52
+#define SQUARE 53
+#define SQUARE_SPRING 53
+#define SQUARE_SUMMER 54
+#define SQUARE_AUTUMN 55
+#define SQUARE_WINTER 56
+#define RICK_STORE 57
+#define MIDWIFE_HOUSE 58
+#define TAVERN 59
+#define LIBRARY 60
+#define MARIA_ROOM 61
+#define MAYOR_HOUSE 62
+#define POTION_SHOP_BEDROOM 63
+#define POTION_SHOP 64
+#define EMPTY_MAP_2 65
+#define HARVEST_SPRITE_CAVE 66
+#define CAVE 67
+#define MINE 68
+#define MINE_2 69
+#define KAREN_ROOM 70
+#define VINEYARD 71
+#define VINEYARD_SPRING 71
+#define VINEYARD_SUMMER 72
+#define VINEYARD_AUTUMN 73
+#define VINEYARD_WINTER 74
+#define VINEYARD_HOUSE 75
+#define VINEYARD_CELLAR 76
+#define VINEYARD_CELLAR_BASEMENT 77
+#define ROAD 78
+#define ROAD_SPRING 78
+#define ROAD_SUMMER 79
+#define ROAD_AUTUMN 80
+#define ROAD_WINTER 81
+#define FARM 82
+#define FARM_SPRING 82
+#define FARM_SUMMER 83
+#define FARM_AUTUMN 84
+#define FARM_WINTER 85
+#define GREENHOUSE 86
+#define HOUSE 87
+#define BARN 88
+#define COOP 89
+#define KITCHEN 90
+#define BATHROOM 91
+
+// =============================================================================
+// Map Dimensions (width x height in tiles, all use 32x32 tile size)
+// =============================================================================
+
+#define MAP_TILE_SIZE 32
+
+// Outdoor seasonal maps
+#define MAP_FARM_WIDTH          38
+#define MAP_FARM_HEIGHT         38
+#define MAP_RANCH_WIDTH         34
+#define MAP_RANCH_HEIGHT        34
+#define MAP_BEACH_WIDTH         48
+#define MAP_BEACH_HEIGHT        32
+#define MAP_RACE_TRACK_WIDTH    20
+#define MAP_RACE_TRACK_HEIGHT   27
+#define MAP_MOUNTAIN_1_WIDTH    25
+#define MAP_MOUNTAIN_1_HEIGHT   29
+#define MAP_MOUNTAIN_2_WIDTH    25
+#define MAP_MOUNTAIN_2_HEIGHT   35
+#define MAP_TOP_OF_MOUNTAIN_1_WIDTH  28
+#define MAP_TOP_OF_MOUNTAIN_1_HEIGHT 16
+#define MAP_MOON_MOUNTAIN_WIDTH      28
+#define MAP_MOON_MOUNTAIN_HEIGHT     35
+#define MAP_POND_WIDTH          26
+#define MAP_POND_HEIGHT         18
+#define MAP_VILLAGE_1_WIDTH     35
+#define MAP_VILLAGE_1_HEIGHT    30
+#define MAP_VILLAGE_2_WIDTH     34
+#define MAP_VILLAGE_2_HEIGHT    20
+#define MAP_SQUARE_WIDTH        20
+#define MAP_SQUARE_HEIGHT       32
+#define MAP_VINEYARD_WIDTH      36
+#define MAP_VINEYARD_HEIGHT     32
+#define MAP_ROAD_WIDTH          18
+#define MAP_ROAD_HEIGHT         24
+
+// Indoor maps
+#define MAP_BARN_WIDTH          20
+#define MAP_BARN_HEIGHT         20
+#define MAP_COOP_WIDTH          10
+#define MAP_COOP_HEIGHT         11
+#define MAP_HOUSE_WIDTH         14
+#define MAP_HOUSE_HEIGHT        13
+#define MAP_KITCHEN_WIDTH       14
+#define MAP_KITCHEN_HEIGHT      12
+#define MAP_BATHROOM_WIDTH      10
+#define MAP_BATHROOM_HEIGHT     10
+#define MAP_GREENHOUSE_WIDTH    21
+#define MAP_GREENHOUSE_HEIGHT   18
+#define MAP_RANCH_BARN_WIDTH    16
+#define MAP_RANCH_BARN_HEIGHT   21
+#define MAP_RANCH_STORE_WIDTH   10
+#define MAP_RANCH_STORE_HEIGHT  12
+#define MAP_RANCH_HOUSE_WIDTH   16
+#define MAP_RANCH_HOUSE_HEIGHT  12
+#define MAP_ANN_ROOM_WIDTH      11
+#define MAP_ANN_ROOM_HEIGHT     10
+#define MAP_BAKERY_WIDTH        12
+#define MAP_BAKERY_HEIGHT       10
+#define MAP_ELLI_ROOM_WIDTH     10
+#define MAP_ELLI_ROOM_HEIGHT    10
+#define MAP_FLOWER_SHOP_WIDTH   10
+#define MAP_FLOWER_SHOP_HEIGHT  12
+#define MAP_POPURI_ROOM_WIDTH   10
+#define MAP_POPURI_ROOM_HEIGHT  10
+#define MAP_CHURCH_WIDTH        10
+#define MAP_CHURCH_HEIGHT       14
+#define MAP_SOUVENIR_SHOP_WIDTH  8
+#define MAP_SOUVENIR_SHOP_HEIGHT 10
+#define MAP_RICK_STORE_WIDTH    10
+#define MAP_RICK_STORE_HEIGHT   12
+#define MAP_MIDWIFE_HOUSE_WIDTH  8
+#define MAP_MIDWIFE_HOUSE_HEIGHT 10
+#define MAP_TAVERN_WIDTH        12
+#define MAP_TAVERN_HEIGHT       14
+#define MAP_LIBRARY_WIDTH       10
+#define MAP_LIBRARY_HEIGHT      10
+#define MAP_MAYOR_HOUSE_WIDTH   12
+#define MAP_MAYOR_HOUSE_HEIGHT  12
+#define MAP_MARIA_ROOM_WIDTH    12
+#define MAP_MARIA_ROOM_HEIGHT   10
+#define MAP_POTION_SHOP_WIDTH   10
+#define MAP_POTION_SHOP_HEIGHT   8
+#define MAP_POTION_SHOP_BEDROOM_WIDTH  10
+#define MAP_POTION_SHOP_BEDROOM_HEIGHT  8
+#define MAP_VINEYARD_HOUSE_WIDTH   14
+#define MAP_VINEYARD_HOUSE_HEIGHT  14
+#define MAP_VINEYARD_CELLAR_WIDTH  12
+#define MAP_VINEYARD_CELLAR_HEIGHT 12
+#define MAP_VINEYARD_CELLAR_BASEMENT_WIDTH  12
+#define MAP_VINEYARD_CELLAR_BASEMENT_HEIGHT 12
+#define MAP_KAREN_ROOM_WIDTH    16
+#define MAP_KAREN_ROOM_HEIGHT    9
+#define MAP_CARPENTER_HUT_WIDTH 11
+#define MAP_CARPENTER_HUT_HEIGHT 11
+#define MAP_DUMPLING_HOUSE_WIDTH 12
+#define MAP_DUMPLING_HOUSE_HEIGHT 15
+#define MAP_CAVE_WIDTH          22
+#define MAP_CAVE_HEIGHT         18
+#define MAP_HARVEST_SPRITE_CAVE_WIDTH  11
+#define MAP_HARVEST_SPRITE_CAVE_HEIGHT 11
+#define MAP_MINE_WIDTH          14
+#define MAP_MINE_HEIGHT         14
+
+// =============================================================================
+// Tile-to-World Coordinate Conversion Macros
+// =============================================================================
+// Convert tile grid coordinates to world coordinates (floats centered on map)
+// Formula: world = TILE_SIZE * (tile - mapDimension / 2)
+// Center tile of any map = world coordinate 0
+
+#define TILE_TO_WORLD_X(map_width, tile_x) \
+    (MAP_TILE_SIZE * ((tile_x) - (map_width) / 2))
+
+#define TILE_TO_WORLD_Z(map_height, tile_z) \
+    (MAP_TILE_SIZE * ((tile_z) - (map_height) / 2))
+
+#define FARM_TILE_X(tile_x)     TILE_TO_WORLD_X(MAP_FARM_WIDTH, tile_x)
+#define FARM_TILE_Z(tile_z)     TILE_TO_WORLD_Z(MAP_FARM_HEIGHT, tile_z)
+#define RANCH_TILE_X(tile_x)    TILE_TO_WORLD_X(MAP_RANCH_WIDTH, tile_x)
+#define RANCH_TILE_Z(tile_z)    TILE_TO_WORLD_Z(MAP_RANCH_HEIGHT, tile_z)
+#define VILLAGE_1_TILE_X(tile_x) TILE_TO_WORLD_X(MAP_VILLAGE_1_WIDTH, tile_x)
+#define VILLAGE_1_TILE_Z(tile_z) TILE_TO_WORLD_Z(MAP_VILLAGE_1_HEIGHT, tile_z)
+#define VILLAGE_2_TILE_X(tile_x) TILE_TO_WORLD_X(MAP_VILLAGE_2_WIDTH, tile_x)
+#define VILLAGE_2_TILE_Z(tile_z) TILE_TO_WORLD_Z(MAP_VILLAGE_2_HEIGHT, tile_z)
+#define SQUARE_TILE_X(tile_x)   TILE_TO_WORLD_X(MAP_SQUARE_WIDTH, tile_x)
+#define SQUARE_TILE_Z(tile_z)   TILE_TO_WORLD_Z(MAP_SQUARE_HEIGHT, tile_z)
+#define BEACH_TILE_X(tile_x)    TILE_TO_WORLD_X(MAP_BEACH_WIDTH, tile_x)
+#define BEACH_TILE_Z(tile_z)    TILE_TO_WORLD_Z(MAP_BEACH_HEIGHT, tile_z)
+#define BARN_TILE_X(tile_x)     TILE_TO_WORLD_X(MAP_BARN_WIDTH, tile_x)
+#define BARN_TILE_Z(tile_z)     TILE_TO_WORLD_Z(MAP_BARN_HEIGHT, tile_z)
+#define HOUSE_TILE_X(tile_x)    TILE_TO_WORLD_X(MAP_HOUSE_WIDTH, tile_x)
+#define HOUSE_TILE_Z(tile_z)    TILE_TO_WORLD_Z(MAP_HOUSE_HEIGHT, tile_z)
+#define KITCHEN_TILE_X(tile_x)  TILE_TO_WORLD_X(MAP_KITCHEN_WIDTH, tile_x)
+#define KITCHEN_TILE_Z(tile_z)  TILE_TO_WORLD_Z(MAP_KITCHEN_HEIGHT, tile_z)
+#define CHURCH_TILE_X(tile_x)   TILE_TO_WORLD_X(MAP_CHURCH_WIDTH, tile_x)
+#define CHURCH_TILE_Z(tile_z)   TILE_TO_WORLD_Z(MAP_CHURCH_HEIGHT, tile_z)
+#define LIBRARY_TILE_X(tile_x)  TILE_TO_WORLD_X(MAP_LIBRARY_WIDTH, tile_x)
+#define LIBRARY_TILE_Z(tile_z)  TILE_TO_WORLD_Z(MAP_LIBRARY_HEIGHT, tile_z)
+#define MAYOR_HOUSE_TILE_X(tile_x)  TILE_TO_WORLD_X(MAP_MAYOR_HOUSE_WIDTH, tile_x)
+#define MAYOR_HOUSE_TILE_Z(tile_z)  TILE_TO_WORLD_Z(MAP_MAYOR_HOUSE_HEIGHT, tile_z)
+#define MOUNTAIN_1_TILE_X(tile_x)   TILE_TO_WORLD_X(MAP_MOUNTAIN_1_WIDTH, tile_x)
+#define MOUNTAIN_1_TILE_Z(tile_z)   TILE_TO_WORLD_Z(MAP_MOUNTAIN_1_HEIGHT, tile_z)
+#define MOUNTAIN_2_TILE_X(tile_x)   TILE_TO_WORLD_X(MAP_MOUNTAIN_2_WIDTH, tile_x)
+#define MOUNTAIN_2_TILE_Z(tile_z)   TILE_TO_WORLD_Z(MAP_MOUNTAIN_2_HEIGHT, tile_z)
+#define POND_TILE_X(tile_x)     TILE_TO_WORLD_X(MAP_POND_WIDTH, tile_x)
+#define POND_TILE_Z(tile_z)     TILE_TO_WORLD_Z(MAP_POND_HEIGHT, tile_z)
+
+// =============================================================================
+// Spawn Points
+// =============================================================================
+
+// house exit
+#define FARM_SPAWN_POINT_1  0
+#define FARM_SPAWN_POINT_2  1
+#define FARM_SPAWN_POINT_3  2
+#define FARM_SPAWN_POINT_4  3
+#define FARM_SPAWN_POINT_5  4
+#define FARM_SPAWN_POINT_6  5
+#define FARM_SPAWN_POINT_7  6
+#define FARM_SPAWN_POINT_8  7
+#define FARM_SPAWN_POINT_9  8
+#define FARM_SPAWN_POINT_10 9
+#define FARM_SPAWN_POINT_11 111
+// sick day
+#define HOUSE_SPAWN_POINT_1 10
+#define HOUSE_SPAWN_POINT_2 11
+// middle of house
+#define HOUSE_SPAWN_POINT_3 12
+#define HOUSE_SPAWN_POINT_4 112
+#define BATHROOM_SPAWN_POINT_1 13
+#define BATHROOM_SPAWN_POINT_2 14
+#define KITCHEN_SPAWN_POINT_1 15
+#define KITCHEN_SPAWN_POINT_2 16
+#define BARN_SPAWN_POINT_1 17
+#define COOP_SPAWN_POINT_1 18
+#define GREENHOUSE_SPAWN_POINT_1 19
+#define ROAD_SPAWN_POINT_1 20
+#define ROAD_SPAWN_POINT_2 21
+#define ROAD_SPAWN_POINT_3 22
+#define ROAD_SPAWN_POINT_4 23
+#define ROAD_SPAWN_POINT_5 24
+#define ROAD_SPAWN_POINT_6 25
+#define MOUNTAIN_1_SPAWN_POINT_1 26
+#define MOUNTAIN_1_SPAWN_POINT_2 27
+#define MOUNTAIN_1_SPAWN_POINT_3 28
+#define MOUNTAIN_2_SPAWN_POINT_1 29
+#define MOUNTAIN_2_SPAWN_POINT_2 30
+#define MOUNTAIN_2_SPAWN_POINT_3 31
+// carpenter hut exit
+#define MOUNTAIN_2_SPAWN_POINT_4 32
+// moon mountain exit
+#define MOUNTAIN_2_SPAWN_POINT_5 33
+#define MOUNTAIN_2_SPAWN_POINT_6 34
+#define TOP_OF_MOUNTAIN_1_SPAWN_POINT_1 35
+#define TOP_OF_MOUNTAIN_1_SPAWN_POINT_2 36
+#define MOON_MOUNTAIN_SPAWN_POINT_1 37
+// moon mountain exit
+#define MOON_MOUNTAIN_SPAWN_POINT_2 38
+#define BEACH_SPAWN_POINT_1  39
+#define BEACH_SPAWN_POINT_2  40
+#define RANCH_SPAWN_POINT_1 41
+#define RANCH_SPAWN_POINT_2 42
+// ranch store exit
+#define RANCH_SPAWN_POINT_3 43
+// ranch house exit
+#define RANCH_SPAWN_POINT_4 44
+#define RANCH_SPAWN_POINT_5 45
+#define RANCH_SPAWN_POINT_6 114
+#define RANCH_SPAWN_POINT_7 115
+#define VINEYARD_SPAWN_POINT_1 46
+#define VINEYARD_SPAWN_POINT_2 47
+#define VINEYARD_SPAWN_POINT_3 48
+#define VINEYARD_SPAWN_POINT_4 49
+#define VILLAGE_1_SPAWN_POINT_1  50
+#define VILLAGE_1_SPAWN_POINT_2  51
+#define VILLAGE_1_SPAWN_POINT_3  52
+#define VILLAGE_1_SPAWN_POINT_4  53
+#define VILLAGE_1_SPAWN_POINT_5  54
+#define VILLAGE_1_SPAWN_POINT_6  55
+#define VILLAGE_1_SPAWN_POINT_7  56
+#define VILLAGE_1_SPAWN_POINT_8  57
+#define VILLAGE_1_SPAWN_POINT_9  58
+#define VILLAGE_1_SPAWN_POINT_10 59
+#define VILLAGE_1_SPAWN_POINT_11 60
+#define VILLAGE_1_SPAWN_POINT_12 61
+#define VILLAGE_2_SPAWN_POINT_1 62
+#define VILLAGE_2_SPAWN_POINT_2 63
+#define VILLAGE_2_SPAWN_POINT_3 64
+#define VILLAGE_2_SPAWN_POINT_4 65
+#define VILLAGE_2_SPAWN_POINT_5 66
+#define VILLAGE_2_SPAWN_POINT_6 67
+#define VILLAGE_2_SPAWN_POINT_7 68
+#define CAVE_SPAWN_POINT_1 69
+#define CAVE_SPAWN_POINT_2 70
+// mine exit
+#define CAVE_SPAWN_POINT_3 71
+#define POND_SPAWN_POINT_1 72
+#define CARPENTER_HUT_SPAWN_POINT_1 73
+#define DUMPLING_HOUSE_SPAWN_POINT_1 74
+#define RANCH_STORE_SPAWN_POINT_1 75
+#define RANCH_STORE_SPAWN_POINT_2 76
+#define ANN_ROOM_SPAWN_POINT_1 77
+#define RANCH_HOUSE_SPAWN_POINT_1 78
+#define RANCH_BARN_SPAWN_POINT_1 79
+#define VINEYARD_HOUSE_SPAWN_POINT_1 80
+#define VINEYARD_HOUSE_SPAWN_POINT_2 81
+#define KAREN_ROOM_SPAWN_POINT_1 82
+#define VINEYARD_CELLAR_SPAWN_POINT_1 83
+#define VINEYARD_CELLAR_SPAWN_POINT_2 84
+#define VINEYARD_CELLAR_BASEMENT_SPAWN_POINT_1 85
+#define FLOWER_SHOP_SPAWN_POINT_1 86
+// popuri room exit
+#define FLOWER_SHOP_SPAWN_POINT_2 87
+#define POPURI_ROOM_SPAWN_POINT_1 88
+#define BAKERY_SPAWN_POINT_1 89
+#define BAKERY_SPAWN_POINT_2 90
+#define BAKERY_SPAWN_POINT_3 91
+#define ELLI_ROOM_SPAWN_POINT_1 92
+#define RICK_STORE_SPAWN_POINT_1 93
+#define SOUVENIR_SHOP_SPAWN_POINT_1 94
+#define CHURCH_SPAWN_POINT_1 95
+#define TAVERN_SPAWN_POINT_1 96
+#define SQUARE_SPAWN_POINT_1 97
+#define SQUARE_SPAWN_POINT_2 98
+#define SQUARE_SPAWN_POINT_3 99
+#define LIBRARY_SPAWN_POINT_1 100
+#define MAYOR_HOUSE_SPAWN_POINT_1 101
+#define MAYOR_HOUSE_SPAWN_POINT_2 102
+#define MARIA_ROOM_SPAWN_POINT_1 103
+#define POTION_SHOP_SPAWN_POINT_1 104
+#define POTION_SHOP_SPAWN_POINT_2 105
+#define POTION_SHOP_BEDROOM_SPAWN_POINT_1 106
+#define MIDWIFE_HOUSE_SPAWN_POINT_1 107
+#define RACE_TRACK_SPAWN_POINT_1 108
+#define HARVEST_SPRITE_CAVE_SPAWN_POINT_1 109
+#define MINE_SPAWN_POINT_1 110
+#define MINE_2_SPAWN_POINT_1 113
+
+#endif

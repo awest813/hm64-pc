@@ -1,0 +1,55 @@
+# N64Recomp configuration for Harvest Moon 64 (US version)
+# Note: os*/libultra functions are already handled by N64Recomp's reimplemented_funcs list
+
+[input]
+elf_path = "../hm64.elf"
+rom_file_path = "../baserom.us.z64"
+output_func_path = "output/funcs"
+# mainproc is the N64 entrypoint; N64Recomp renames it to recomp_entrypoint
+entrypoint = 0x80025D90
+
+[patches]
+# RSP microcode blob - cannot be recompiled as MIPS, ignore it
+# (other RSP funcs are already in N64Recomp's internal reimplemented_funcs list)
+ignored = [
+    "aspMainTextStart",
+]
+
+stubs = [
+    # EPI link handle - not needed on PC
+    "osEPiLinkHandle",
+
+    # NuSystem - replaced by ultramodern/librecomp runtime
+    "nuGfxThreadStart",
+    "nuGfxTaskStart",
+    "nuGfxTaskAllEndWait",
+    "nuGfxSwapCfb",
+    "nuGfxSwapCfbFuncSet",
+    "nuGfxPreNMIFuncSet",
+    "nuGfxFuncSet",
+    "nuGfxDisplayOn",
+    "nuGfxDisplayOff",
+    "nuGfxTaskMgrInit",
+    "nuSiCallBackAdd",
+    "nuContInit",
+    "nuContDataGetExAll",
+
+    # Controller Pak - not used on PC
+    "nuContPakOpen",
+    "nuContPakRepairId",
+    "nuContPakGetFree",
+    "nuContPakFileNum",
+    "nuContPakCodeSet",
+    "nuContPakFileOpenJis",
+    "nuContPakFileReadWrite",
+    "nuContPakFileDeleteJis",
+
+    # Audio (libmus)
+    "MusInitialize",
+    "MusSetMasterVolume",
+    "MusStartSong",
+    "MusStop",
+
+    # Game loop callbacks - our patches handle these
+    "gfxRetraceCallback",
+]
