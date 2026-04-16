@@ -62,3 +62,10 @@ tools/n64recomp/build/
 # Local fallback clones used when submodule gitlinks are unavailable
 tools/n64recomp/
 recomp/lib/N64ModernRuntime/
+
+# Debian packages
+*.deb
+
+# Log files
+*.log
+run*.log
