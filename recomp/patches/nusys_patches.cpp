@@ -567,7 +567,14 @@ RECOMP_PATCH void nuPiReadRom(uint8_t* rdram, recomp_context* ctx) {
                      ((uint64_t)phys + size <= (uint64_t)rom_phys_end);
 
     if (!in_bounds) {
-        // Don't print OOB - it's expected for garbage calls. Just skip.
+        static uint32_t oob_log_count = 0;
+        if (oob_log_count < 20) {
+            printf("[nuPiReadRom OOB #%u] elf=0x%06X rom=0x%06X buf=%08X size=%u phys_end=0x%06X rom_size=0x%06X\n",
+                   oob_log_count, rom_offset_elf, rom_offset, (uint32_t)buf_ptr, size,
+                   phys + size, (uint32_t)rom_span.size());
+            fflush(stdout);
+        }
+        oob_log_count++;
         return;
     }
 

@@ -61,8 +61,14 @@ static bool s_title_forced = false;
 static bool s_diag_dumped = false;
 
 static const char* dl_cmd_name(uint32_t w0);
+static const char* cs_opcode_name(uint16_t op);
 
 static inline bool scene_has_no_world_geometry() { return s_no_world_geometry; }
+
+// Forward declarations for helpers used by mainLoop but defined later.
+static inline uint16_t read_cb_idx(uint8_t* rdram);
+static inline void     write_cb_idx(uint8_t* rdram, uint16_t v);
+extern "C" void setMainLoopCallbackFunctionIndex(uint8_t* rdram, recomp_context* ctx);
 
 // ---------------------------------------------------------------------------
 // Dummy-map constants
@@ -305,8 +311,34 @@ extern "C" RECOMP_PATCH void mainproc(uint8_t* rdram, recomp_context* ctx) {
                     s_stuck_cnt[ei] = changed ? 0 : s_stuck_cnt[ei] + 1;
                     s_prev_pc[ei] = bptr;
                     if (changed || s_stuck_cnt[ei] == 1 || s_stuck_cnt[ei] % 60 == 0) {
-                        printf("[cs-exec ei=%d iter=%u] pc=%08X op=%u wait=%u stuck=%u flg=%04X\n",
-                               ei, iter, bptr, opcode, wait, s_stuck_cnt[ei], eflags);
+                        printf("[cs-exec ei=%d iter=%u] pc=%08X op=%u(%s) wait=%u stuck=%u flg=%04X%s\n",
+                               ei, iter, bptr, opcode, cs_opcode_name(opcode),
+                               wait, s_stuck_cnt[ei], eflags,
+                               scene_has_no_world_geometry() ? " NO_GEO" : "");
+                        fflush(stdout);
+                    }
+                    if (opcode == 60 && s_stuck_cnt[ei] > 0 && s_stuck_cnt[ei] % 30 == 0) {
+                        uint16_t assetIdx = *(uint16_t*)(rdram + ((bvma + 0x62u ^ 2u) - 0x80000000u));
+                        bool sprite_flag = (eflags & 0x2u) != 0;
+                        bool entity_flag = (eflags & 0x8u) != 0;
+                        bool map_flag    = (eflags & 0x10u) != 0;
+                        const char* check = "none";
+                        if (sprite_flag || entity_flag) {
+                            uint16_t si = sprite_flag ? assetIdx :
+                                *(uint16_t*)(rdram + ((0x80205580u + assetIdx * 0x160u + 0x14u ^ 2u) - 0x80000000u));
+                            uint16_t sf = *(uint16_t*)(rdram + ((0x80205580u + si * 0x10u + 0x8u ^ 2u) - 0x80000000u));
+                            check = (sf & 0x400u) ? "SPRITE_DONE" : "SPRITE_NOT_DONE";
+                        } else if (map_flag) {
+                            uint16_t mcMainMap = *(uint16_t*)(rdram + ((0x80205520u + assetIdx * 0x20u ^ 2u) - 0x80000000u));
+                            uint16_t mf = *(uint16_t*)(rdram + ((0x8016F810u + mcMainMap * 0xC0u + 0x8Au ^ 2u) - 0x80000000u));
+                            bool mapActive = (mf & 0x1u) != 0;
+                            bool rgbaBit3  = (mf & 0x8u) != 0;
+                            check = (mapActive && rgbaBit3) ? "MAP_DONE" : "MAP_NOT_DONE";
+                        }
+                        printf("[rgba-wait ei=%d iter=%u stuck=%u] asset=%u flags=[%s%s%s] %s no_geo=%d\n",
+                               ei, iter, s_stuck_cnt[ei], assetIdx,
+                               sprite_flag ? "SPR" : "", entity_flag ? " ENT" : "",
+                               map_flag ? " MAP" : "", check, scene_has_no_world_geometry());
                         fflush(stdout);
                     }
                 }
@@ -427,37 +459,35 @@ extern "C" RECOMP_PATCH void mainproc(uint8_t* rdram, recomp_context* ctx) {
                                ei, bptr, opcode, wait, eflags);
                     }
                 }
-                printf("[state #%u] csflags=0x%08X cscompl=0x%08X csidx=%u active=%d\n",
-                       iter, csflags, (uint32_t)compl_, csidx, active);
+                printf("[state #%u] csflags=0x%08X cscompl=0x%08X csidx=%u active=%d no_geo=%d\n",
+                        iter, csflags, (uint32_t)compl_, csidx, active, scene_has_no_world_geometry());
                 fflush(stdout);
-
-                // --- PC PORT HACK ---
-                // If any opening-sequence cutscene (segment 30, csidx 1450-1499)
-                // gets stuck, set the completion flags so handleCutsceneCompletion
-                // (called from the MAIN_GAME callback) will transition to title screen
-                // via the normal code path:
-                //   deactivateCutsceneExecutors -> deactivateSprites ->
-                //   unloadMapAssets -> initializeTitleScreen(0)
-                {
-                    uint16_t seg = *(uint16_t*)(rdram + ((0x8018981Cu ^ 2u) - 0x80000000u));
-                    bool opening_stuck = (seg == 30 && iter > 120) ||
-                                         (csidx >= 1450 && csidx <= 1499 && iter > 120);
-                    if (opening_stuck && !s_title_forced) {
-                        printf("[fix] Setting completion flags for opening transition: seg=%u csidx=%u iter=%u\n",
-                               seg, csidx, iter);
-                        fflush(stdout);
-
-                        // Set bit 0 (0x1) to enter the main dispatch block,
-                        // AND bit 15 (0x8000) to trigger the title screen path.
-                        // There is NO case 30 in the segment switch, so it falls
-                        // through to the common code that checks 0x800/0x8000.
-                        *(int32_t*)(rdram + (0x801891D4u - 0x80000000u)) = 0x8001;
-
-                        s_title_forced = true;
-                    }
-                }
-                // --------------------
             }
+
+            // --- PC PORT HACK ---
+            // Deterministic check: fire at exactly iter=120 (not gated by % 60).
+            // Previously nested inside iter % 60 == 0, so earliest fire was 180.
+            {
+                uint16_t seg = *(uint16_t*)(rdram + ((0x8018981Cu ^ 2u) - 0x80000000u));
+                uint16_t csidx = *(uint16_t*)(rdram + ((0x801C3B66u ^ 2u) - 0x80000000u));
+                bool opening_stuck = (seg == 30 && iter >= 10) ||
+                                     (csidx >= 1450 && csidx <= 1499 && iter >= 10);
+                if (opening_stuck && !s_title_forced) {
+                    printf("[fix] Setting completion flags for opening transition: seg=%u csidx=%u iter=%u\n",
+                           seg, csidx, iter);
+                    fflush(stdout);
+                    *(int32_t*)(rdram + (0x801891D4u - 0x80000000u)) = 0x8001;
+                    s_title_forced = true;
+
+                    // BLOCKER 1 fix: after forcing completion, also switch callback
+                    // to TITLE_SCREEN=0x32 so titleScreenMainLoopCallback actually runs.
+                    // Unconditionally force the switch since we're bypassing normal flow.
+                    write_cb_idx(rdram, 0x32);
+                    printf("[fix] Forced callback 1 -> 0x32 (TITLE_SCREEN)\n");
+                    fflush(stdout);
+                }
+            }
+            // --------------------
 
             // Reset stepMainLoop = 0
             rdram[(STEP_ML ^ 3u) - 0x80000000u] = 0;
@@ -1109,17 +1139,17 @@ extern "C" RECOMP_PATCH void renderScene(uint8_t* rdram, recomp_context* ctx) {
     { extern void renderSceneGraph(uint8_t*, recomp_context*); renderSceneGraph(rdram, ctx); }
     dl = ctx->r2;
     
-    printf("[renderScene] dl_out=%p dl_size=%u\n", (void*)(uint32_t)dl, (uint32_t)((uint32_t)dl - (uint32_t)(dl_start)));
+    // Log display list contents after renderSceneGraph
+    uint32_t dl_size_bytes = (uint32_t)((uint32_t)dl - (uint32_t)(dl_start));
+    printf("[renderScene] dl_out=%p dl_size=%u\n", (void*)(uint32_t)dl, dl_size_bytes);
     fflush(stdout);
 
-    // Log display list contents after renderSceneGraph
-    if (rs_count < 10) {
-        printf("[renderScene #%u] dumping dl_out:\n", rs_count);
+    if (rs_count < 5) {
+        printf("[renderScene #%u] dumping dl_out (%u cmds):\n", rs_count, dl_size_bytes / 8);
         uint32_t* dlp = (uint32_t*)(rdram + ((uint32_t)dl_start & 0x1FFFFFFFu));
-        uint32_t n_cmds = (uint32_t)((uint32_t)dl - (uint32_t)dl_start) / 8;
+        uint32_t n_cmds = dl_size_bytes / 8;
         for (uint32_t i = 0; i < n_cmds; i++) {
-            const char* name = dl_cmd_name(dlp[i*2]);
-            printf("  [%02u] %s: %08X %08X\n", i, name, dlp[i*2], dlp[i*2+1]);
+            printf("  [%02u] %08X %08X  (%s)\n", i, dlp[i*2], dlp[i*2+1], dl_cmd_name(dlp[i*2]));
         }
         fflush(stdout);
         rs_count++;
@@ -1131,32 +1161,26 @@ extern "C" RECOMP_PATCH void renderScene(uint8_t* rdram, recomp_context* ctx) {
     MEM_W(0x0, dl) = (int32_t)0xDF000000u; MEM_W(0x4, dl) = 0;
     dl = ADD32(dl, 0x8);
 
-    // Dump first sprite sub-DL content after title screen is active
-    static bool dumped_sprite_dl = false;
-    if (!dumped_sprite_dl && s_title_forced) {
-        // Read the first gSPDisplayList target from the scene DL
-        // The DL structure after setup is: viewportDL, fillcolor, cycles, matrices...
-        // then gSPDisplayList calls to sprite DLs
+    // Dump sprite sub-DLs when title screen scene is active
+    static bool dumped_title_scene = false;
+    if (!dumped_title_scene && s_title_forced && dl_size_bytes >= 368) {
         uint32_t* dl_words = (uint32_t*)(rdram + ((uint32_t)dl_start & 0x1FFFFFFFu));
-        uint32_t n_cmds = (uint32_t)((uint32_t)dl - (uint32_t)dl_start) / 8;
-        for (uint32_t i = 0; i < n_cmds; i++) {
+        uint32_t n_cmds = dl_size_bytes / 8;
+        int dl_count = 0;
+        for (uint32_t i = 0; i < n_cmds && dl_count < 3; i++) {
             if ((dl_words[i*2] & 0xFF000000u) == 0xDE000000u) {
                 uint32_t sub_dl_phys = dl_words[i*2+1];
-                printf("[sprite-dl] sub-DL at phys=0x%08X\n", sub_dl_phys);
-                // Read first 8 words of sub-DL
-                uint32_t sub_dl_vaddr = sub_dl_phys | 0x80000000u;
+                printf("[title-scene-dl] #%d at 0x%08X\n", dl_count, sub_dl_phys);
                 uint32_t* subp = (uint32_t*)(rdram + (sub_dl_phys & 0x1FFFFFFFu));
-                for (int j = 0; j < 16 && (sub_dl_phys & 0x1FFFFFFFu) + j*4 < 0x800000u; j++) {
-                    printf("  +%02d: %08X %08X", j*8, subp[j*2], subp[j*2+1]);
-                    const char* nm = dl_cmd_name(subp[j*2]);
-                    printf("  (%s)\n", nm);
-                    if (subp[j*2] == 0xDF000000u) break; // EndDisplayList
+                for (int j = 0; j < 40 && (sub_dl_phys & 0x1FFFFFFFu) + j*8 < 0x800000u; j++) {
+                    printf("  +%03d: %08X %08X  (%s)\n", j*8, subp[j*2], subp[j*2+1], dl_cmd_name(subp[j*2]));
+                    if (subp[j*2] == 0xDF000000u) break;
                 }
                 fflush(stdout);
-                dumped_sprite_dl = true;
-                break;
+                dl_count++;
             }
         }
+        dumped_title_scene = true;
     }
 
     // nuGfxTaskStart(dl_start, size, NU_GFX_UCODE_F3DEX, NU_SC_NOSWAPBUFFER)
@@ -1278,8 +1302,7 @@ extern "C" RECOMP_PATCH void setMapAudioAndLighting(uint8_t* rdram, recomp_conte
         setMainLoopCallbackFunctionIndex(rdram, ctx);
     } else {
         printf("  -> branch: setLevelLighting(8,1)\n"); fflush(stdout);
-        // Clear the garbage completion flags so the cutscene can proceed normally
-        if (opening_path && csflags < 0) {
+        if (opening_path && csflags != 0) {
             printf("  [fix] clearing garbage gCutsceneCompletionFlags %08X -> 0\n",
                    (uint32_t)csflags);
             fflush(stdout);
@@ -1500,3 +1523,95 @@ static const char* cs_opcode_name(uint16_t op) {
 }
 
 // updateCutsceneExecutors probe is now inline in the manual main loop.
+
+// ---------------------------------------------------------------------------
+// cutsceneHandlerWaitRgbaFinished – PC patch for dummy-map RGBA stalls.
+//
+// On the N64, updateSprites() advances RGBA lerps each frame; once
+// current==target, bit 10 (SPRITE_RGBA_IN_PROGRESS=0x400) of stateFlags
+// is set, and checkSpriteRGBAUpdateFinished() returns true.
+// For maps, checkMapRGBADone() needs MAP_ACTIVE + bit 3 of mapState.flags.
+//
+// On the PC dummy-map path (s_no_world_geometry), the map is never
+// MAP_ACTIVE, so CUTSCENE_MAP_ASSET executors spin forever on opcode 60.
+// Sprites may also stall if textures never loaded (baseRGBA==0 → NaN deltas).
+//
+// Fix: when s_no_world_geometry, immediately advance past the wait.
+// ---------------------------------------------------------------------------
+extern "C" RECOMP_PATCH void cutsceneHandlerWaitRgbaFinished(uint8_t* rdram, recomp_context* ctx) {
+    uint16_t index = (uint16_t)(ctx->r4 & 0xFFFF);
+
+    // CutsceneExecutor offsets (cutscene.h):
+    //   +0x00 bytecodePtr  (void*)
+    //   +0x62 assetIndex   (u16)
+    //   +0x66 waitFrames   (u16)
+    //   +0x6C flags        (u16) — bit0=ACTIVE, bit1=SPRITE, bit3=ENTITY, bit4=MAP
+    constexpr uint32_t EXEC_BASE = 0x801808B0u;
+    constexpr uint32_t EXEC_SIZE = 0x70u;
+    uint32_t bvma = EXEC_BASE + index * EXEC_SIZE;
+
+    uint32_t bptr = *(uint32_t*)(rdram + (bvma - 0x80000000u));
+    uint16_t eflags = *(uint16_t*)(rdram + ((bvma + 0x6Cu ^ 2u) - 0x80000000u));
+    uint16_t assetIdx = *(uint16_t*)(rdram + ((bvma + 0x62u ^ 2u) - 0x80000000u));
+
+    bptr += 2;
+    *(uint32_t*)(rdram + (bvma - 0x80000000u)) = bptr;
+
+    if (scene_has_no_world_geometry()) {
+        // Force-complete: skip the conditional check word entirely.
+        bptr += 2;
+        *(uint32_t*)(rdram + (bvma - 0x80000000u)) = bptr;
+        static int skip_log = 0;
+        if (skip_log++ < 5) {
+            printf("[WaitRgbaFinished ei=%u] forced complete (no_world_geometry) flg=%04X\n",
+                   index, eflags);
+            fflush(stdout);
+        }
+        return;
+    }
+
+    if (eflags & 0x2u) {
+        // CUTSCENE_SPRITE_ASSET: check globalSprites[assetIdx].stateFlags bit 10
+        // globalSprites base=0x80205580, stride=0x10, stateFlags at +0x8
+        uint16_t sf = *(uint16_t*)(rdram + ((0x80205580u + assetIdx * 0x10u + 0x8u ^ 2u) - 0x80000000u));
+        if ((sf & 0x1u) && (sf & 0x400u)) {
+            bptr += 2;
+            *(uint32_t*)(rdram + (bvma - 0x80000000u)) = bptr;
+        } else {
+            *(uint16_t*)(rdram + ((bvma + 0x66u ^ 2u) - 0x80000000u)) = 1;
+            bptr -= 2;
+            *(uint32_t*)(rdram + (bvma - 0x80000000u)) = bptr;
+        }
+    }
+
+    if (eflags & 0x8u) {
+        // CUTSCENE_ENTITY_ASSET: entities[assetIdx].globalSpriteIndex
+        // entities base=0x80205580, stride=0x160, globalSpriteIndex at +0x14
+        uint16_t gsi = *(uint16_t*)(rdram + ((0x80205580u + assetIdx * 0x160u + 0x14u ^ 2u) - 0x80000000u));
+        uint16_t sf = *(uint16_t*)(rdram + ((0x80205580u + gsi * 0x10u + 0x8u ^ 2u) - 0x80000000u));
+        if ((sf & 0x1u) && (sf & 0x400u)) {
+            bptr += 2;
+            *(uint32_t*)(rdram + (bvma - 0x80000000u)) = bptr;
+        } else {
+            *(uint16_t*)(rdram + ((bvma + 0x66u ^ 2u) - 0x80000000u)) = 1;
+            bptr -= 2;
+            *(uint32_t*)(rdram + (bvma - 0x80000000u)) = bptr;
+        }
+    }
+
+    if (eflags & 0x10u) {
+        // CUTSCENE_MAP_ASSET: mapControllers[assetIdx].mainMapIndex
+        // mapControllers base=0x80205520, stride=0x20, mainMapIndex at +0x00
+        uint16_t mainMapIdx = *(uint16_t*)(rdram + ((0x80205520u + assetIdx * 0x20u ^ 2u) - 0x80000000u));
+        // mainMap[mainMapIdx].mapState.flags at 0x8016F810 + mainMapIdx*0xC0 + 0x8A
+        uint16_t mf = *(uint16_t*)(rdram + ((0x8016F810u + mainMapIdx * 0xC0u + 0x8Au ^ 2u) - 0x80000000u));
+        if (mainMapIdx == 0 && (mf & 0x1u) && (mf & 0x8u)) {
+            bptr += 2;
+            *(uint32_t*)(rdram + (bvma - 0x80000000u)) = bptr;
+        } else {
+            *(uint16_t*)(rdram + ((bvma + 0x66u ^ 2u) - 0x80000000u)) = 1;
+            bptr -= 2;
+            *(uint32_t*)(rdram + (bvma - 0x80000000u)) = bptr;
+        }
+    }
+}
