@@ -98,6 +98,7 @@ chmod +x "$MKLDSCRIPT_BIN"
 
 python3 -m pip --version >/dev/null 2>&1 || fail "python3 -m pip is unavailable"
 run "Installing Python dependencies (user scope)" \
+    python3 -m pip install --user -U -r "$REQ_FILE" || \
     python3 -m pip install --user --break-system-packages -U -r "$REQ_FILE"
 
 log "Done. Next recommended command: make doctor"
