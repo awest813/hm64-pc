@@ -2,6 +2,7 @@
 
 .set noat
 .set noreorder
+.set gp=64
 
 .section .text, "ax"
 

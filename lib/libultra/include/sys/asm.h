@@ -29,7 +29,7 @@ extern "C" {
     ASM_TYPE_FUNC(x)       ;\
     .ent    x,0            ;\
     x:                     ;\
-    .frame  $29,0,$31
+    .frame  sp,0,ra
 
 #if defined(BBPLAYER) || defined(__sgi)
 #define XLEAF(x)    \

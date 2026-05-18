@@ -4701,8 +4701,7 @@ void handleCutsceneCompletion(void) {
             }
 
             // opening cutscenes (funeral, mayor tour)
-            // Added check for 0x8000 for OPENING_LOGOS completion
-            if (((gCutsceneCompletionFlags & 0x800) || (gCutsceneCompletionFlags & 0x8000)) && gCutsceneBytecodeSegmentIndex == 30) {
+            if ((gCutsceneCompletionFlags & 0x800) && gCutsceneBytecodeSegmentIndex == 30) {
                 deactivateCutsceneExecutors();
                 deactivateSprites();
                 unloadMapAssets(MAIN_MAP_INDEX);

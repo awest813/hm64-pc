@@ -56,12 +56,12 @@ void mainLoop(void) {
     while (TRUE) {
       
         nuGfxDisplayOn();
-        
+          
         while (engineStateFlags & 1) {
             
             while (stepMainLoop == FALSE);
             
-            if (!D_8020564C) {
+            if (!D_8020564C) { 
               
               D_80182BA0 = 1;
               
@@ -70,7 +70,7 @@ void mainLoop(void) {
 
               D_8020564C = D_80182BA0; 
 
-            }
+            } 
             
             D_8020564C -= 1;    
 

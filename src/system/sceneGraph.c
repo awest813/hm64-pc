@@ -61,13 +61,14 @@ void func_80029294(void) {}
 u16 addSceneNode(Gfx *dl, u16 flags) {
 
     u16 index = sceneNodeCounter;
-    
+
     sceneNodes[index].dl = dl;
     sceneNodes[index].flags = flags | SCENE_NODE_ACTIVE;
     
     sceneNodeCounter++;
     
     return index;
+
 }
 
 //INCLUDE_ASM("asm/nonmatchings/system/sceneGraph", addSceneNodePosition);
@@ -103,8 +104,7 @@ void func_800293B8(void) {}
 //INCLUDE_ASM("asm/nonmatchings/system/sceneGraph", renderSceneGraph);
 
 Gfx* renderSceneGraph(Gfx* dl, SceneMatrices* matrices) {
-    Gfx* dl_start = dl;
-    u16 active_count = 0;
+
     u16 i;
 
     Vec3f vec;
@@ -185,10 +185,9 @@ Gfx* renderSceneGraph(Gfx* dl, SceneMatrices* matrices) {
 
     for (i = 0; i < MAX_SCENE_NODES; i++) {
         
-            if (sceneNodes[i].flags & SCENE_NODE_ACTIVE) {
-                active_count++;
-
-                if (sceneNodes[i].flags & SCENE_NODE_TRANSFORM_EXEMPT) {
+        if (sceneNodes[i].flags & SCENE_NODE_ACTIVE) {
+        
+            if (sceneNodes[i].flags & SCENE_NODE_TRANSFORM_EXEMPT) {
 
                 vec = sceneNodes[i].positions;
                 
@@ -240,10 +239,10 @@ Gfx* renderSceneGraph(Gfx* dl, SceneMatrices* matrices) {
             
             sceneNodes[i].flags = 0;
             
-            // } - removed extra brace
         }
+ 
     }
-
+    
     return dl++;
     
 }

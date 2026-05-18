@@ -1,7 +1,5 @@
 #include <nusys.h>
 
-#define ROM_SIZE 0x1000000  // 16MB
-
 void nuPiReadRom(u32 rom_addr, void* buf_ptr, u32 size) {
 
     OSIoMesg	dmaIoMesgBuf;

@@ -1,6 +1,9 @@
 #include "common.h"
+
 #include "game/title.h"
+
 #include "ld_symbols.h"
+
 #include "system/controller.h"  
 #include "system/dialogue.h"
 #include "system/globalSprites.h"

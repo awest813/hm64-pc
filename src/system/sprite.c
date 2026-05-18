@@ -645,19 +645,17 @@ static void processBitmapSceneNode(BitmapObject* sprite, Gfx *dl) {
 //INCLUDE_ASM("asm/nonmatchings/system/sprite", updateBitmaps);
 
 void updateBitmaps(void) {
-    
+
     u16 i;
 
     Gfx *dlStartPosition;
     Gfx *dl = spriteDisplayList[gGraphicsBufferIndex];
 
     u16 spriteNumber = 0;
-    u16 active_count = 0;
     
     for (i = 0; i < MAX_BITMAPS; i++) {
         
         if (bitmaps[i].flags & BITMAP_ACTIVE) {
-            active_count++;
     
             setBitmapFormat(&bitmaps[i], bitmaps[i].timg, bitmaps[i].pal);
 
@@ -669,8 +667,8 @@ void updateBitmaps(void) {
             spriteNumber += bitmaps[i].vtxIndex;
             bitmaps[i].flags &= ~1;
             
-        }
-    }
+       }
+   }
     
     if (dl - spriteDisplayList[gGraphicsBufferIndex] >= 0x880) {
         __assert("EX", "s:/system/sprite.c", 820);
