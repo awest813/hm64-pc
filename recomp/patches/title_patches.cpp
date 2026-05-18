@@ -355,68 +355,28 @@ extern "C" RECOMP_PATCH void mainproc(uint8_t* rdram, recomp_context* ctx) {
 
             #undef RUN
 
-            // === DIAGNOSTIC: dump bitmap structs + sprite sub-DLs after title transition ===
-            if (s_title_forced && !s_diag_dumped) {
+            // === DIAGNOSTIC: dump bitmap structs after title has been rendering ===
+            if (s_title_forced && !s_diag_dumped && iter > 25) {
                 s_diag_dumped = true;
-                printf("\n========== TITLE SCREEN DIAGNOSTIC ==========\n"); fflush(stdout);
-
-                // C) Dump first few bitmap structs
+                printf("\n========== TITLE SCREEN DIAGNOSTIC (iter=%u) ==========\n", iter); fflush(stdout);
                 constexpr uint32_t BITMAP_BASE = 0x80205500u;
                 constexpr uint32_t BITMAP_STRIDE = 0x30u;
-                constexpr uint32_t MAX_BITMAPS_DUMP = 8;
-                for (uint32_t bi = 0; bi < MAX_BITMAPS_DUMP; bi++) {
+                for (uint32_t bi = 0; bi < 24; bi++) {
                     uint32_t bv = BITMAP_BASE + bi * BITMAP_STRIDE;
                     uint32_t flags   = *(uint32_t*)(rdram + (bv - 0x80000000u));
+                    if (flags == 0) continue;
                     uint32_t rndFlags= *(uint32_t*)(rdram + (bv + 4 - 0x80000000u));
                     uint32_t spriteNo= *(uint16_t*)(rdram + ((bv + 8 ^ 2u) - 0x80000000u));
                     uint32_t texPtr  = *(uint32_t*)(rdram + (bv + 0x10 - 0x80000000u));
+                    uint32_t palPtr  = *(uint32_t*)(rdram + (bv + 0x14 - 0x80000000u));
                     uint32_t width   = *(uint16_t*)(rdram + ((bv + 0x1A ^ 2u) - 0x80000000u));
                     uint32_t height  = *(uint16_t*)(rdram + ((bv + 0x1C ^ 2u) - 0x80000000u));
                     uint32_t fmt     = *(uint8_t*)(rdram + ((bv + 0x1E ^ 3u) - 0x80000000u));
                     uint32_t siz     = *(uint8_t*)(rdram + ((bv + 0x1F ^ 3u) - 0x80000000u));
-                    float    scaleX  = 0, scaleY = 0;
-                    __builtin_memcpy(&scaleX, rdram + (bv + 0x20 - 0x80000000u), 4);
-                    __builtin_memcpy(&scaleY, rdram + (bv + 0x24 - 0x80000000u), 4);
-                    printf("[bitmap-%u] flags=0x%08X rndFlags=0x%08X sprite=%u tex=%08X %ux%u fmt=%u siz=%u scale=(%.1f,%.1f)\n",
-                           bi, flags, rndFlags, spriteNo, texPtr, width, height, fmt, siz, scaleX, scaleY);
-                    if (bi == 0 && flags != 0) {
-                        printf("[bitmap-%u tex-data first32]:", bi);
-                        if (texPtr >= 0x80000000u && texPtr < 0x80800000u) {
-                            for (int ti = 0; ti < 32; ti++) {
-                                printf(" %02X", *(uint8_t*)(rdram + ((texPtr + ti ^ 3u) - 0x80000000u)));
-                            }
-                        } else {
-                            printf(" (tex ptr out of RDRAM range)");
-                        }
-                        printf("\n");
-                    }
+                    printf("[bitmap-%u] flags=0x%X rndFl=0x%X spr=%u tex=%08X pal=%08X %ux%u fmt=%u siz=%u\n",
+                           bi, flags, rndFlags, spriteNo, texPtr, palPtr, width, height, fmt, siz);
+                    fflush(stdout);
                 }
-
-                // B) Dump sprite sub-DLs referenced from scene graph
-                constexpr uint32_t SCENE_DL = 0x801836A0u;
-                uint32_t* sdl = (uint32_t*)(rdram + (SCENE_DL - 0x80000000u));
-                printf("\n[scene-DL scan] base=0x%08X first 128 bytes:\n", SCENE_DL);
-                for (int w = 0; w < 64; w += 2) {
-                    uint32_t hi = sdl[w], lo = sdl[w+1];
-                    const char* nm = dl_cmd_name(hi);
-                    printf("  +%03X: %08X %08X (%s)\n", w*4, hi, lo, nm);
-                    if ((hi & 0xFF000000u) == 0xDE000000u) {
-                        uint32_t child_phys = lo;
-                        if (child_phys < 0x2000000u) {
-                            uint32_t* cdl = (uint32_t*)(rdram + child_phys);
-                            printf("    [child-DL phys=0x%08X] first 16 commands:\n", child_phys);
-                            bool found_end = false;
-                            for (int ci = 0; ci < 16; ci++) {
-                                uint32_t ch = cdl[ci*2], cl = cdl[ci*2+1];
-                                const char* cn = dl_cmd_name(ch);
-                                printf("      [%02d] %08X %08X (%s)\n", ci, ch, cl, cn);
-                                if (ch == 0xDF000000u) { found_end = true; break; }
-                            }
-                            if (!found_end) printf("      (no terminator found in 16 cmds)\n");
-                        }
-                    }
-                }
-                printf("========== END DIAGNOSTIC ==========\n\n"); fflush(stdout);
             }
 
             // Every 60 iters: dump cutscene state
@@ -478,13 +438,10 @@ extern "C" RECOMP_PATCH void mainproc(uint8_t* rdram, recomp_context* ctx) {
                     fflush(stdout);
                     *(int32_t*)(rdram + (0x801891D4u - 0x80000000u)) = 0x8001;
                     s_title_forced = true;
-
-                    // BLOCKER 1 fix: after forcing completion, also switch callback
-                    // to TITLE_SCREEN=0x32 so titleScreenMainLoopCallback actually runs.
-                    // Unconditionally force the switch since we're bypassing normal flow.
-                    write_cb_idx(rdram, 0x32);
-                    printf("[fix] Forced callback 1 -> 0x32 (TITLE_SCREEN)\n");
-                    fflush(stdout);
+                    // Do NOT switch callback here. On the next iteration, mainGameLoopCallback
+                    // (cb=1) will see cscompl=0x8001, enter handleCutsceneCompletion,
+                    // and call initializeTitleScreen(0) which internally calls
+                    // setMainLoopCallbackFunctionIndex(TITLE_SCREEN).
                 }
             }
             // --------------------
