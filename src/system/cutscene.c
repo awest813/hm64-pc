@@ -982,15 +982,20 @@ void cutsceneHandlerSetFrameDelta(u16 index) {
 void cutsceneHandlerSetWaitFrames(u16 index) {
 
     CutsceneWaitFramesCmd* ptr = (CutsceneWaitFramesCmd*)cutsceneExecutors[index].bytecodePtr;
+    u16* bytecodePtr;
     u16 waitFrames;
 
-    (u16*)cutsceneExecutors[index].bytecodePtr += 1;
+    bytecodePtr = (u16*)cutsceneExecutors[index].bytecodePtr;
+    bytecodePtr += 1;
+    cutsceneExecutors[index].bytecodePtr = bytecodePtr;
 
     waitFrames = ptr->frames;
     
     cutsceneExecutors[index].waitFrames = waitFrames;
     
-    (u16*)cutsceneExecutors[index].bytecodePtr += 1;
+    bytecodePtr = (u16*)cutsceneExecutors[index].bytecodePtr;
+    bytecodePtr += 1;
+    cutsceneExecutors[index].bytecodePtr = bytecodePtr;
 
 }
 

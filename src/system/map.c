@@ -197,6 +197,16 @@ static inline u16 swap16TileIndex(Swap16 halfword) {
 
 }
 
+static inline u16 swap16TileIndexValue(u16 halfword) {
+
+    Swap16 swap;
+
+    swap.halfword = halfword;
+
+    return swap16TileIndex(swap);
+
+}
+
 //INCLUDE_ASM("asm/nonmatchings/system/map", initializeMap);
 
 void initializeMap(void) {
@@ -928,7 +938,7 @@ bool setGroundObjectBitmap(u16 mapIndex, u16 bitmapIndex, u16 spriteIndex, f32 x
 
 // FIXME: inline function used before it's defined means it doesn't properly inline; also can't use `swap16TileIndex` directly
 static inline u16 getTileIndexFromGrid_static_inline(u16 mapIndex, u8 x, u8 z) {
-    return swap16TileIndex((&mainMap[mapIndex].mapGrid.gridToTileIndex[mainMap[mapIndex].mapGrid.mapWidth * z])[x]);
+    return swap16TileIndexValue((&mainMap[mapIndex].mapGrid.gridToTileIndex[mainMap[mapIndex].mapGrid.mapWidth * z])[x]);
 }
 
 //INCLUDE_ASM("asm/nonmatchings/system/map", getTerrainHeightAtPosition);
@@ -1717,7 +1727,7 @@ void setGroundObjects(u16 mapIndex) {
 //INCLUDE_ASM("asm/nonmatchings/system/map", getTileIndexFromGrid);
 
 inline u16 getTileIndexFromGrid(u16 mapIndex, u8 x, u8 z) {
-    return swap16TileIndex((&mainMap[mapIndex].mapGrid.gridToTileIndex[mainMap[mapIndex].mapGrid.mapWidth * z])[x]);
+    return swap16TileIndexValue((&mainMap[mapIndex].mapGrid.gridToTileIndex[mainMap[mapIndex].mapGrid.mapWidth * z])[x]);
 }
 
 //INCLUDE_ASM("asm/nonmatchings/system/map", setMapGrid);

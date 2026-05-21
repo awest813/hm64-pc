@@ -13,6 +13,9 @@
 #include <cstddef>
 #include <chrono>
 #include <thread>
+#include <csignal>
+#include <execinfo.h>
+#include <unistd.h>
 
 #include <SDL2/SDL.h>
 
@@ -24,7 +27,7 @@
 #include <ultramodern/error_handling.hpp>
 #include <ultramodern/threads.hpp>
 #include <librecomp/game.hpp>
-#include <librecomp/recomp.h>
+#include <recomp.h>
 #include <librecomp/overlays.hpp>
 #include <xxHash/xxh3.h>
 
@@ -38,6 +41,29 @@ extern "C" recomp_func_t* get_function(int32_t addr);
 extern "C" {
     void recomp_entrypoint(uint8_t* rdram, recomp_context* ctx);
     void register_game_overlays();
+}
+
+static void platform_crash_handler(int sig, siginfo_t* info, void*) {
+    char msg[256];
+    int len = snprintf(msg, sizeof(msg),
+        "\n[hm64_pc] Fatal signal %d at %p\n", sig, info ? info->si_addr : nullptr);
+    if (len > 0) {
+        write(STDERR_FILENO, msg, static_cast<size_t>(len));
+    }
+
+    void* frames[64];
+    int frame_count = backtrace(frames, 64);
+    backtrace_symbols_fd(frames, frame_count, STDERR_FILENO);
+    _exit(128 + sig);
+}
+
+static void install_platform_crash_handler() {
+    struct sigaction sa{};
+    sa.sa_sigaction = platform_crash_handler;
+    sa.sa_flags = SA_SIGINFO | SA_RESETHAND;
+    sigemptyset(&sa.sa_mask);
+    sigaction(SIGSEGV, &sa, nullptr);
+    sigaction(SIGABRT, &sa, nullptr);
 }
 
 // Silent RSP audio ucode: called in place of real RSP audio microcode.
@@ -259,6 +285,8 @@ static constexpr gpr HM64_ENTRYPOINT = (gpr)(int32_t)0x80025C00;
 static const std::u8string HM64_GAME_ID = u8"hm64_us";
 
 int main(int argc, char* argv[]) {
+    install_platform_crash_handler();
+
     printf("[hm64_pc] Starting...\n");
     fflush(stdout);
 

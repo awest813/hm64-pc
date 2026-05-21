@@ -13,7 +13,7 @@
  * Add patches here as needed when testing reveals incompatibilities.
  */
 
-#include "librecomp/recomp.h"
+#include "recomp.h"
 #include "ultramodern/ultramodern.hpp"
 
 // ---------------------------------------------------------------------------

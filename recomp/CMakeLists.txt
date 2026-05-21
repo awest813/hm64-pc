@@ -118,5 +118,5 @@ if(UNIX AND NOT APPLE)
     # Allow patches to override recompiled stubs: patch .o files are listed
     # first in the source list, so the linker sees them first and their
     # definitions win over the duplicate stub definitions in the funcs_*.c files.
-    target_link_options(hm64_pc PRIVATE -Wl,--allow-multiple-definition)
+    target_link_options(hm64_pc PRIVATE -rdynamic -Wl,--allow-multiple-definition)
 endif()

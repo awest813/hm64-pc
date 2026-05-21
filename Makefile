@@ -1,6 +1,30 @@
 BASENAME := hm64
 TARGET := $(BASENAME).z64
 
+# Windows users commonly run the documented commands from a checkout on the
+# Windows filesystem while relying on WSL for the POSIX toolchain. If this file
+# is parsed by Win32 GNU Make, delegate the requested target into WSL's native
+# make before any POSIX-heavy variables or recipes are expanded.
+ifeq ($(OS),Windows_NT)
+ifneq ($(HM64_WSL_MAKE),1)
+  WSL_CWD := $(shell wsl wslpath -a "$(CURDIR)")
+  WSL_GOALS := $(if $(MAKECMDGOALS),$(MAKECMDGOALS),all)
+  .DEFAULT_GOAL := all
+  .PHONY: $(WSL_GOALS) all
+$(WSL_GOALS) all:
+	@wsl bash -lc 'cd "$(WSL_CWD)" && HM64_WSL_MAKE=1 make $(WSL_GOALS)'
+else
+endif
+endif
+
+ifneq ($(OS),Windows_NT)
+  HM64_BUILD_BODY := 1
+else ifeq ($(HM64_WSL_MAKE),1)
+  HM64_BUILD_BODY := 1
+endif
+
+ifeq ($(HM64_BUILD_BODY),1)
+
 # default to US
 REGION ?= us
 BASEROM := baserom.$(REGION).z64
@@ -83,7 +107,10 @@ ifeq ($(MODERN_GCC),1)
   # Modern GCC flags for N64/VR4300
   CFLAGS_COMMON += -march=vr4300 -mtune=vr4300 -mfix4300
   CFLAGS_COMMON += -mabi=32 -mno-abicalls -fno-PIC -mno-shared
+  CFLAGS_COMMON += -mno-check-zero-division -fno-isolate-erroneous-paths-dereference
+  CFLAGS_COMMON += -fno-partial-inlining -fno-ipa-cp -fno-ipa-cp-clone -fno-ipa-sra
   CFLAGS_COMMON += -ffreestanding -fno-builtin
+  CFLAGS_COMMON += -fgnu89-inline
   CFLAGS_COMMON += -EB
   CFLAGS_COMMON += -Wall -Wno-unused-variable -Wno-unused-parameter -Wno-pointer-sign -Wno-incompatible-pointer-types -Wno-int-conversion
   MACROS += -DMODERN_GCC
@@ -1174,3 +1201,5 @@ clean-recomp:
 	rm -rf $(RECOMP_OUTPUT_DIR) $(RECOMP_BUILD_DIR) tools/n64recomp/build
 
 .PHONY: recomp recomp-generate recomp-build recomp-deps clean-recomp
+
+endif # HM64_BUILD_BODY

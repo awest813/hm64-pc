@@ -8,7 +8,7 @@
  * patch is never called.
  */
 
-#include "librecomp/recomp.h"
+#include "recomp.h"
 #include "librecomp/game.hpp"
 #include "librecomp/addresses.hpp"
 #include "ultramodern/ultramodern.hpp"
@@ -295,10 +295,10 @@ RECOMP_PATCH void nuGfxTaskStart(uint8_t* rdram, recomp_context* ctx) {
     task->t.flags           = 0;
     task->t.data_ptr        = (PTR(u64))gfxp;
     task->t.data_size       = gfxsize;
-    task->t.ucode           = (PTR(u64))0x8010C970u;
-    task->t.ucode_size      = 0x420u;
-    task->t.ucode_data      = (PTR(u64))(0x8010C970u + 0x420u);
-    task->t.ucode_data_size = 0x420u;
+    task->t.ucode           = (PTR(u64))0x800EFA80u;
+    task->t.ucode_size      = 0x0160u;
+    task->t.ucode_data      = (PTR(u64))0x800FC7C0u;
+    task->t.ucode_data_size = 0x0420u;
     task->t.dram_stack      = (PTR(u64))0x8011D000u;
     task->t.dram_stack_size = 0x40u;
     task->t.output_buff     = (PTR(u64))0x80104000u;
@@ -539,39 +539,68 @@ RECOMP_PATCH void osEPiLinkHandle(uint8_t* rdram, recomp_context* ctx) {
 static constexpr uint32_t ROM_LAYOUT_DELTA = 0x4F10u;
 
 RECOMP_PATCH void nuPiReadRom(uint8_t* rdram, recomp_context* ctx) {
-    uint32_t rom_offset_elf = (uint32_t)ctx->r4;
+    uint32_t rom_offset_raw = (uint32_t)ctx->r4;
     gpr      buf_ptr        = ctx->r5;
     uint32_t size           = (uint32_t)ctx->r6;
 
-    // Apply ELF→ROM layout correction.
-    uint32_t rom_offset = rom_offset_elf + ROM_LAYOUT_DELTA;
+    // The title sprite path is entered through patched startup code before all
+    // linker-symbol data agrees with the ROM layout. Remap the stale title
+    // sprite segment bases to the ELF ROM addresses that match baserom.us.z64.
+    if ((rom_offset_raw >= 0x00D97140u) && (rom_offset_raw < 0x00DB0930u)) {
+        rom_offset_raw += 0x0001E0B0u; // title texture: 0xD97140 -> 0xDB51F0
+    }
+    else if ((rom_offset_raw == 0x00DB0930u) && (size == 0x20u)) {
+        rom_offset_raw = 0x00DCE9E0u;  // title asset index
+    }
+
+    auto rom_span = recomp::get_rom();
+    uint32_t rom_size = (uint32_t)rom_span.size();
+
+    auto rom_range_ok = [](uint32_t off, uint32_t len, uint32_t total) -> bool {
+        return len > 0 &&
+               len <= 0x1000000u &&
+               off < total &&
+               ((uint64_t)off + len <= (uint64_t)total);
+    };
+
+    uint32_t rom_offset_delta = rom_offset_raw + ROM_LAYOUT_DELTA;
+    bool raw_ok   = rom_range_ok(rom_offset_raw, size, rom_size);
+    bool delta_ok = rom_range_ok(rom_offset_delta, size, rom_size);
+
+    uint32_t rom_offset = 0;
+    const char* mode = "bad";
+
+    if (delta_ok && !raw_ok) {
+        rom_offset = rom_offset_delta;
+        mode = "delta";
+    } else if (raw_ok && !delta_ok) {
+        rom_offset = rom_offset_raw;
+        mode = "raw";
+    } else if (delta_ok && raw_ok) {
+        // Most linker-symbol segment starts in this build need the correction.
+        // Keeping the mode explicit lets us spot table-derived offsets that
+        // should later be excluded from this preference.
+        rom_offset = rom_offset_delta;
+        mode = "both_delta";
+    }
 
     static uint32_t nuPi_log_count = 0;
-    if (nuPi_log_count < 40 || (nuPi_log_count < 200 && nuPi_log_count % 10 == 0)) {
-        printf("[nuPiReadRom #%u] elf_off=0x%06X rom_off=0x%06X buf=%08X size=%u\n",
-               nuPi_log_count, rom_offset_elf, rom_offset, (uint32_t)buf_ptr, size);
+    bool title_range = (rom_offset_raw >= 0x00D00000u && rom_offset_raw < 0x00E00000u) ||
+                       (rom_offset_delta >= 0x00D00000u && rom_offset_delta < 0x00E00000u);
+    if (nuPi_log_count < 80 || title_range || (nuPi_log_count < 240 && nuPi_log_count % 10 == 0)) {
+        printf("[nuPiReadRom #%u] mode=%s raw=0x%06X delta=0x%06X chosen=0x%06X buf=%08X size=%u ra=%08X\n",
+               nuPi_log_count, mode, rom_offset_raw, rom_offset_delta, rom_offset,
+               (uint32_t)buf_ptr, size, (uint32_t)ctx->r31);
         fflush(stdout);
     }
     nuPi_log_count++;
-
-    // Reconstruct the physical cart address (same as EPI handle would produce).
-    uint32_t phys = rom_offset | recomp::rom_base;
-
-    auto rom_span = recomp::get_rom();
-    uint32_t rom_phys_end = recomp::rom_base + (uint32_t)rom_span.size();
-
-    // Use 64-bit arithmetic to avoid overflow in phys + size.
-    bool in_bounds = (size > 0) &&
-                     (size <= 0x1000000u) &&  // sanity cap: max 16MB
-                     (phys >= recomp::rom_base) &&
-                     ((uint64_t)phys + size <= (uint64_t)rom_phys_end);
-
-    if (!in_bounds) {
+    
+    if (!raw_ok && !delta_ok) {
         static uint32_t oob_log_count = 0;
         if (oob_log_count < 20) {
-            printf("[nuPiReadRom OOB #%u] elf=0x%06X rom=0x%06X buf=%08X size=%u phys_end=0x%06X rom_size=0x%06X\n",
-                   oob_log_count, rom_offset_elf, rom_offset, (uint32_t)buf_ptr, size,
-                   phys + size, (uint32_t)rom_span.size());
+            printf("[nuPiReadRom BAD #%u] raw=0x%06X delta=0x%06X buf=%08X size=%u rom_size=0x%06X ra=%08X\n",
+                   oob_log_count, rom_offset_raw, rom_offset_delta, (uint32_t)buf_ptr,
+                   size, rom_size, (uint32_t)ctx->r31);
             fflush(stdout);
         }
         oob_log_count++;
@@ -579,24 +608,28 @@ RECOMP_PATCH void nuPiReadRom(uint8_t* rdram, recomp_context* ctx) {
     }
 
     // Copy ROM → RDRAM; MEM_B handles the big-endian byte-lane swapping.
-    const uint8_t* src = rom_span.data() + (phys - recomp::rom_base);
+    const uint8_t* src = rom_span.data() + rom_offset;
     for (uint32_t i = 0; i < size; i++) {
         MEM_B(i, buf_ptr) = src[i];
     }
 
     // DIAG: dump first 32 bytes of loaded data for title sprite ROM addresses
     // (0xDB51F0 area) and for the overlay screen assets (0x154420 area)
-    if ((rom_offset_elf >= 0x154000u && rom_offset_elf <= 0x155000u) ||
-        (rom_offset_elf >= 0xDB5000u && rom_offset_elf <= 0xDD0000u)) {
-        printf("[nuPi-DATA] rom=0x%06X buf=0x%08X sz=%u first32:",
-               rom_offset_elf, (uint32_t)buf_ptr, size);
+    static uint32_t nuPi_data_dump_count = 0;
+    if (nuPi_data_dump_count < 24 &&
+        ((rom_offset_raw >= 0x154000u && rom_offset_raw <= 0x155000u) ||
+         (rom_offset_raw >= 0xDB5000u && rom_offset_raw <= 0xDD0000u) ||
+         (rom_offset >= 0xDB5000u && rom_offset <= 0xDD0000u))) {
+        nuPi_data_dump_count++;
+        printf("[nuPi-DATA] mode=%s raw=0x%06X chosen=0x%06X buf=0x%08X sz=%u first32:",
+               mode, rom_offset_raw, rom_offset, (uint32_t)buf_ptr, size);
         uint32_t dump_n = size < 32 ? size : 32;
         for (uint32_t i = 0; i < dump_n; i++) {
             printf(" %02X", MEM_B(i, buf_ptr));
         }
         printf("\n");
         // Also dump what ROM source looks like for comparison
-        printf("[nuPi-SRC]  rom=0x%06X src first32:");
+        printf("[nuPi-SRC]  chosen=0x%06X src first32:", rom_offset);
         for (uint32_t i = 0; i < dump_n; i++) {
             printf(" %02X", src[i]);
         }

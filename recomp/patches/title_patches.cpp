@@ -17,7 +17,7 @@
  *   5. drawFrame – logged wrapper so we can trace render crashes.
  */
 
-#include "librecomp/recomp.h"
+#include "recomp.h"
 #include "librecomp/game.hpp"
 #include "librecomp/addresses.hpp"
 #include "ultramodern/ultramodern.hpp"
@@ -25,11 +25,14 @@
 #include <csignal>
 #include <cstring>
 #include <cstdint>
+#include <execinfo.h>
+#include <unistd.h>
 
 extern "C" {
     void initializeEngine(uint8_t* rdram, recomp_context* ctx);
     void setupGameStart(uint8_t* rdram, recomp_context* ctx);
     void mainLoop(uint8_t* rdram, recomp_context* ctx);
+    void initializeTitleScreen(uint8_t* rdram, recomp_context* ctx);
     void nuPiReadRom(uint8_t* rdram, recomp_context* ctx);
     void initializeCutscene(uint8_t* rdram, recomp_context* ctx);
     void spawnCutsceneExecutor(uint8_t* rdram, recomp_context* ctx);
@@ -75,6 +78,7 @@ extern "C" void setMainLoopCallbackFunctionIndex(uint8_t* rdram, recomp_context*
 // ---------------------------------------------------------------------------
 static constexpr uint16_t OPENING_LOGOS_SPAWN_POINT = 0x61;
 static constexpr uint8_t  OPENING_LOGOS_MAP_ID      = 53;
+static constexpr uint16_t TITLE_SCREEN_CALLBACK     = 0x32;
 
 // ---------------------------------------------------------------------------
 // RDRAM helpers.
@@ -85,9 +89,379 @@ static constexpr uint8_t  OPENING_LOGOS_MAP_ID      = 53;
 // 32-bit word accesses (MEM_W) use addr directly (no XOR).
 // ---------------------------------------------------------------------------
 static inline uint8_t  rdram_ru8 (uint8_t* r, uint32_t v) { return *(uint8_t* )(r + ((v ^ 3u) - 0x80000000u)); }
+static inline uint16_t rdram_ru16(uint8_t* r, uint32_t v) { return *(uint16_t*)(r + ((v ^ 2u) - 0x80000000u)); }
 static inline uint32_t rdram_ru32(uint8_t* r, uint32_t v) { return *(uint32_t*)(r + (v - 0x80000000u)); }
 static inline void     rdram_wu8 (uint8_t* r, uint32_t v, uint8_t  d){ *(uint8_t* )(r + ((v ^ 3u) - 0x80000000u)) = d; }
 static inline void     rdram_wu16(uint8_t* r, uint32_t v, uint16_t d){ *(uint16_t*)(r + ((v ^ 2u) - 0x80000000u)) = d; }
+
+static void dump_logical_bytes(uint8_t* rdram, uint32_t vaddr, uint32_t count) {
+    printf("[raw %08X]", vaddr);
+    for (uint32_t i = 0; i < count; i++) {
+        printf(" %02X", rdram_ru8(rdram, vaddr + i));
+    }
+    printf("\n");
+}
+
+static inline float rdram_rf32(uint8_t* r, uint32_t v) {
+    auto bswap16 = [](uint16_t x) -> uint16_t {
+        return (uint16_t)((x >> 8) | (x << 8));
+    };
+    // Float fields written through the recompiled title path currently have
+    // swapped 16-bit lanes. Decode them as two logical halfwords.
+    uint32_t bits = ((uint32_t)bswap16(rdram_ru16(r, v)) << 16) |
+                    (uint32_t)bswap16(rdram_ru16(r, v + 2u));
+    float value;
+    __builtin_memcpy(&value, &bits, sizeof(value));
+    return value;
+}
+
+static inline float rdram_rf32_direct(uint8_t* r, uint32_t v) {
+    uint32_t bits = rdram_ru32(r, v);
+    float value;
+    __builtin_memcpy(&value, &bits, sizeof(value));
+    return value;
+}
+
+static inline float rdram_rf32_any(uint8_t* r, uint32_t v) {
+    float direct = rdram_rf32_direct(r, v);
+    if (direct > -1000.0f && direct < 1000.0f) {
+        return direct;
+    }
+    return rdram_rf32(r, v);
+}
+
+static inline void rdram_wf32_direct(uint8_t* r, uint32_t v, float value) {
+    uint32_t bits;
+    __builtin_memcpy(&bits, &value, sizeof(bits));
+    *(uint32_t*)(r + (v - 0x80000000u)) = bits;
+}
+
+static inline bool sane_coord(float v) {
+    return v > -1000.0f && v < 1000.0f;
+}
+
+static inline void fb_write_rgba5551(uint8_t* rdram, uint32_t fb_vaddr, int x, int y, uint16_t color) {
+    if ((unsigned)x >= 320u || (unsigned)y >= 240u) return;
+    uint32_t addr = fb_vaddr + (uint32_t)((y * 320 + x) * 2);
+    *(uint16_t*)(rdram + ((addr ^ 2u) - 0x80000000u)) = color;
+}
+
+static float mtx_fixed_to_float(uint8_t* rdram, uint32_t mtx_vaddr, uint32_t index) {
+    int16_t whole = (int16_t)rdram_ru16(rdram, mtx_vaddr + index * 2u);
+    uint16_t frac = rdram_ru16(rdram, mtx_vaddr + 0x20u + index * 2u);
+    int32_t fixed = ((int32_t)whole << 16) | frac;
+    return (float)fixed / 65536.0f;
+}
+
+static uint32_t next_active_bitmap(uint8_t* rdram, uint32_t start) {
+    constexpr uint32_t BITMAP_BASE = 0x801F7110u;
+    constexpr uint32_t BITMAP_STRIDE = 0x58u;
+    for (uint32_t bi = start; bi < 48; bi++) {
+        uint32_t flags = rdram_ru16(rdram, BITMAP_BASE + bi * BITMAP_STRIDE + 0x56u);
+        if (flags != 0) return bi;
+    }
+    return 0xFFFFFFFFu;
+}
+
+static bool title_default_placement(uint32_t bi, float& tx, float& ty) {
+    struct Placement { float x; float y; };
+    // Active bitmap order follows updateSprites' title sprite order. These are
+    // the title.c view-space placements with centerCoordinate = -160.
+    static constexpr Placement kTitlePlacements[] = {
+        {   0.0f,   64.0f }, // logo
+        {   0.0f,  -96.0f }, // copyright / publisher
+        {   0.0f,  -96.0f },
+        {   0.0f,  -16.0f }, // push start sign
+        {-320.0f,  -12.0f }, // how to play sign
+        {-320.0f,  -44.0f }, // dirt road
+        {   0.0f,  -32.0f }, // sign post 1
+        {-352.0f,  -32.0f }, // sign post 2
+        {-288.0f,  -32.0f }, // sign post 3
+        {   0.0f,    0.0f }, // cloud 1 pair
+        {-320.0f,    0.0f },
+        {   0.0f,   64.0f }, // cloud 2 / cloud 3 / licensed pieces
+        {-128.0f,   96.0f },
+        {  64.0f,   80.0f },
+        {-224.0f,   72.0f },
+        {-352.0f,  108.0f },
+        {-448.0f,   88.0f },
+        {   0.0f,    0.0f }, // grass strips
+        {-320.0f,    0.0f },
+        {   0.0f,    0.0f },
+        {   0.0f,    0.0f },
+        {   0.0f,    0.0f },
+        {-320.0f,    0.0f },
+        {-320.0f,    0.0f },
+        {-320.0f,    0.0f },
+    };
+    if (bi >= sizeof(kTitlePlacements) / sizeof(kTitlePlacements[0])) {
+        return false;
+    }
+    tx = kTitlePlacements[bi].x;
+    ty = kTitlePlacements[bi].y;
+    return true;
+}
+
+static void software_blit_bitmap(uint8_t* rdram, uint32_t fb, uint32_t bi, float tx, float ty) {
+    constexpr uint32_t BITMAP_BASE = 0x801F7110u;
+    constexpr uint32_t BITMAP_STRIDE = 0x58u;
+    constexpr uint32_t VTX_BASE = 0x8021E6E0u;
+    constexpr uint32_t VTX_STRIDE = 0x10u;
+    constexpr uint32_t VTXS_PER_BITMAP = 4u;
+    constexpr uint32_t VTX_BANK_SIZE = 0x80u * VTXS_PER_BITMAP * VTX_STRIDE;
+
+    uint32_t bv = BITMAP_BASE + bi * BITMAP_STRIDE;
+    uint32_t tex = rdram_ru32(rdram, bv + 0x00);
+    uint32_t pal = rdram_ru32(rdram, bv + 0x04);
+    int width = (int)rdram_ru32(rdram, bv + 0x08);
+    int height = (int)rdram_ru32(rdram, bv + 0x0C);
+    uint32_t pixel_size = rdram_ru32(rdram, bv + 0x14);
+    uint32_t sprite_no = rdram_ru16(rdram, bv + 0x18);
+    uint32_t vtx_count = rdram_ru16(rdram, bv + 0x1A);
+
+    if (tex < 0x80000000u || tex >= 0x80800000u ||
+        pal < 0x80000000u || pal >= 0x80800000u ||
+        width <= 0 || width > 320 || height <= 0 || height > 240 ||
+        vtx_count == 0 || vtx_count > 16) {
+        return;
+    }
+
+    int texture_height = 0;
+    int texture_width_bytes = 0;
+    if (pixel_size == 0) {
+        texture_height = width > 0 ? (4096 / width) : height;
+        texture_width_bytes = (width + 1) / 2;
+    } else if (pixel_size == 1) {
+        texture_height = width > 0 ? (2048 / width) : height;
+        texture_width_bytes = width;
+    } else {
+        return;
+    }
+    if (texture_height <= 0) texture_height = height;
+
+    uint32_t gfx_buf = (uint32_t)MEM_W(0x5630, (gpr)(int32_t)0x80200000u) & 1u;
+    uint32_t vtx_bank = VTX_BASE + gfx_buf * VTX_BANK_SIZE;
+    int texture_y = 0;
+
+    for (uint32_t seg = 0; seg < vtx_count; seg++) {
+        uint32_t v0 = vtx_bank + (sprite_no + seg) * VTXS_PER_BITMAP * VTX_STRIDE;
+        int16_t lx0 = (int16_t)rdram_ru16(rdram, v0 + 0x00);
+        int16_t ly0 = (int16_t)rdram_ru16(rdram, v0 + 0x02);
+        int16_t lx1 = (int16_t)rdram_ru16(rdram, v0 + VTX_STRIDE + 0x00);
+        int16_t ly2 = (int16_t)rdram_ru16(rdram, v0 + VTX_STRIDE * 2 + 0x02);
+        int local_min_x = lx0 < lx1 ? lx0 : lx1;
+        int local_max_x = lx0 > lx1 ? lx0 : lx1;
+        int tile_w = local_max_x - local_min_x;
+        int tile_h = ly0 - ly2;
+        if (tile_w <= 0) tile_w = width;
+        if (tile_h <= 0) tile_h = texture_height;
+        if (texture_y + tile_h > height) tile_h = height - texture_y;
+        if (tile_h <= 0) break;
+
+        int dst_x0 = (int)(160.0f + tx + (float)local_min_x);
+        int dst_y0 = (int)(120.0f - ty - (float)ly0);
+
+        for (int dy = 0; dy < tile_h; dy++) {
+            int sy = texture_y + dy;
+            if (sy < 0 || sy >= height) continue;
+            int py = dst_y0 + dy;
+            if ((unsigned)py >= 240u) continue;
+            for (int dx = 0; dx < tile_w; dx++) {
+                int sx = dx;
+                if (sx < 0 || sx >= width) continue;
+                int px = dst_x0 + dx;
+                if ((unsigned)px >= 320u) continue;
+
+                uint8_t idx;
+                uint32_t tex_off = (uint32_t)(sy * texture_width_bytes);
+                if (pixel_size == 0) {
+                    uint8_t packed = rdram_ru8(rdram, tex + tex_off + (uint32_t)(sx >> 1));
+                    idx = (sx & 1) ? (packed & 0x0Fu) : (packed >> 4);
+                } else {
+                    idx = rdram_ru8(rdram, tex + tex_off + (uint32_t)sx);
+                }
+
+                uint16_t color = rdram_ru16(rdram, pal + (uint32_t)idx * 2u);
+                if ((color & 1u) == 0) continue;
+                fb_write_rgba5551(rdram, fb, px, py, color);
+            }
+        }
+
+        texture_y += tile_h;
+    }
+}
+
+static void software_blit_title_from_scene(uint8_t* rdram, uint32_t dl_start, uint32_t dl_size_bytes) {
+    uint32_t fb = rdram_ru32(rdram, 0x80205750u);
+    if (fb < 0x80000000u || fb >= 0x80800000u) {
+        fb = 0x8038F800u;
+    }
+
+    // Clear the visible framebuffer to opaque black before drawing the title quads.
+    for (int y = 0; y < 240; y++) {
+        for (int x = 0; x < 320; x++) {
+            fb_write_rgba5551(rdram, fb, x, y, 0x0001u);
+        }
+    }
+
+    uint32_t n_cmds = dl_size_bytes / 8u;
+    uint32_t bitmap_cursor = 0;
+    uint32_t last_translation_mtx = 0;
+    uint32_t drawn = 0;
+
+    for (uint32_t i = 0; i < n_cmds; i++) {
+        uint32_t cmd_v = dl_start + i * 8u;
+        uint32_t w0 = rdram_ru32(rdram, cmd_v);
+        uint32_t w1 = rdram_ru32(rdram, cmd_v + 4u);
+        if ((w0 & 0xFF0000FFu) == 0xDA000003u) {
+            last_translation_mtx = 0x80000000u | (w1 & 0x00FFFFFFu);
+        } else if (((w0 & 0xFF000000u) == 0xDE000000u) && i != 0 && last_translation_mtx != 0) {
+            uint32_t bi = next_active_bitmap(rdram, bitmap_cursor);
+            if (bi == 0xFFFFFFFFu) break;
+            bitmap_cursor = bi + 1u;
+
+            float tx = mtx_fixed_to_float(rdram, last_translation_mtx, 12);
+            float ty = mtx_fixed_to_float(rdram, last_translation_mtx, 13);
+            uint32_t bv = 0x801F7110u + bi * 0x58u;
+            const char* placement_mode = "mtx";
+            if (tx > -0.01f && tx < 0.01f && ty > -0.01f && ty < 0.01f) {
+                float bx = rdram_rf32_any(rdram, bv + 0x1Cu);
+                float by = rdram_rf32_any(rdram, bv + 0x20u);
+                float sx = rdram_rf32_any(rdram, bv + 0x28u);
+                float sy = rdram_rf32_any(rdram, bv + 0x2Cu);
+                if (!sane_coord(bx)) bx = 0.0f;
+                if (!sane_coord(by)) by = 0.0f;
+                if (!(sx > 0.001f && sx < 8.0f)) sx = 1.0f;
+                if (!(sy > 0.001f && sy < 8.0f)) sy = 1.0f;
+
+                int width = (int)rdram_ru32(rdram, bv + 0x08u);
+                int height = (int)rdram_ru32(rdram, bv + 0x0Cu);
+                uint32_t render = rdram_ru16(rdram, bv + 0x54u);
+                tx = bx;
+                ty = by;
+                if (((render >> 3) & 3u) == 1u) tx = bx + (float)((width / 2) * sx);
+                if (((render >> 3) & 3u) == 3u) tx = bx - (float)((width / 2) * sx);
+                if (((render >> 5) & 3u) == 1u) ty = by + (float)((height / 2) * sy);
+                if (((render >> 5) & 3u) == 3u) ty = by - (float)((height / 2) * sy);
+                placement_mode = "bitmap";
+                if (tx > -0.01f && tx < 0.01f && ty > -0.01f && ty < 0.01f &&
+                    title_default_placement(bi, tx, ty)) {
+                    placement_mode = "title";
+                }
+            }
+            static uint32_t placement_log_count = 0;
+            if (placement_log_count < 32) {
+                printf("[software-title-place] mode=%s bi=%u mtx=%08X tx=%.2f ty=%.2f tex=%08X %ux%u\n",
+                       placement_mode, bi, last_translation_mtx, tx, ty, rdram_ru32(rdram, bv),
+                       rdram_ru32(rdram, bv + 0x08), rdram_ru32(rdram, bv + 0x0C));
+                fflush(stdout);
+                placement_log_count++;
+            }
+            software_blit_bitmap(rdram, fb, bi, tx, ty);
+            drawn++;
+            last_translation_mtx = 0;
+        }
+    }
+
+    static uint32_t blit_log_count = 0;
+    if (blit_log_count++ < 6) {
+        uint32_t fb_phys = fb & 0x1FFFFFFFu;
+        uint16_t p0 = *(uint16_t*)(rdram + fb_phys);
+        uint16_t pc = *(uint16_t*)(rdram + fb_phys + (120 * 320 + 160) * 2);
+        printf("[software-title-blit] fb=0x%08X drawn=%u p00=0x%04X pc=0x%04X\n",
+               fb, drawn, p0, pc);
+        fflush(stdout);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Sprite transform setters.
+//
+// The title setup code stores positions through these tiny helpers before
+// updateSprites expands each SpriteObject into BitmapObjects.  Letting the
+// recompiled C body write floats here leaves several title sprites effectively
+// at the origin.  These patches write the RDRAM SpriteObject fields directly
+// with the actual HM64 bss layout.
+// ---------------------------------------------------------------------------
+static constexpr uint32_t GLOBAL_SPRITES_BASE = 0x801FD630u;
+static constexpr uint32_t GLOBAL_SPRITE_STRIDE = 0x9Cu;
+static constexpr uint32_t GLOBAL_SPRITE_VIEW_POS = 0x2Cu;
+static constexpr uint32_t GLOBAL_SPRITE_SCALE = 0x38u;
+static constexpr uint32_t GLOBAL_SPRITE_ROT = 0x44u;
+static constexpr uint32_t GLOBAL_SPRITE_STATE_FLAGS = 0x9Au;
+static constexpr uint16_t SPRITE_ACTIVE_FLAG = 0x0001u;
+static constexpr uint32_t MAX_GLOBAL_SPRITES = 192u;
+
+static inline float ctx_f32_arg(gpr value) {
+    uint32_t bits = (uint32_t)value;
+    float out;
+    __builtin_memcpy(&out, &bits, sizeof(out));
+    return out;
+}
+
+static inline bool global_sprite_active(uint8_t* rdram, uint32_t index) {
+    if (index >= MAX_GLOBAL_SPRITES) return false;
+    uint32_t sv = GLOBAL_SPRITES_BASE + index * GLOBAL_SPRITE_STRIDE;
+    return (rdram_ru16(rdram, sv + GLOBAL_SPRITE_STATE_FLAGS) & SPRITE_ACTIVE_FLAG) != 0;
+}
+
+static inline void write_sprite_vec3(uint8_t* rdram, uint32_t index, uint32_t field, float x, float y, float z) {
+    uint32_t sv = GLOBAL_SPRITES_BASE + index * GLOBAL_SPRITE_STRIDE + field;
+    rdram_wf32_direct(rdram, sv + 0x0u, x);
+    rdram_wf32_direct(rdram, sv + 0x4u, y);
+    rdram_wf32_direct(rdram, sv + 0x8u, z);
+}
+
+static inline void read_sprite_vec3_any(uint8_t* rdram, uint32_t index, uint32_t field, float& x, float& y, float& z) {
+    uint32_t sv = GLOBAL_SPRITES_BASE + index * GLOBAL_SPRITE_STRIDE + field;
+    x = rdram_rf32_any(rdram, sv + 0x0u);
+    y = rdram_rf32_any(rdram, sv + 0x4u);
+    z = rdram_rf32_any(rdram, sv + 0x8u);
+}
+
+extern "C" RECOMP_PATCH void setSpriteViewSpacePosition(uint8_t* rdram, recomp_context* ctx) {
+    uint32_t index = (uint32_t)ctx->r4 & 0xFFFFu;
+    ctx->r2 = 0;
+    if (!global_sprite_active(rdram, index)) return;
+
+    write_sprite_vec3(rdram, index, GLOBAL_SPRITE_VIEW_POS,
+                      ctx_f32_arg(ctx->r5), ctx_f32_arg(ctx->r6), ctx_f32_arg(ctx->r7));
+    ctx->r2 = 1;
+}
+
+extern "C" RECOMP_PATCH void adjustSpriteViewSpacePosition(uint8_t* rdram, recomp_context* ctx) {
+    uint32_t index = (uint32_t)ctx->r4 & 0xFFFFu;
+    ctx->r2 = 0;
+    if (!global_sprite_active(rdram, index)) return;
+
+    float x, y, z;
+    read_sprite_vec3_any(rdram, index, GLOBAL_SPRITE_VIEW_POS, x, y, z);
+    write_sprite_vec3(rdram, index, GLOBAL_SPRITE_VIEW_POS,
+                      x + ctx_f32_arg(ctx->r5),
+                      y + ctx_f32_arg(ctx->r6),
+                      z + ctx_f32_arg(ctx->r7));
+    ctx->r2 = 1;
+}
+
+extern "C" RECOMP_PATCH void setSpriteScale(uint8_t* rdram, recomp_context* ctx) {
+    uint32_t index = (uint32_t)ctx->r4 & 0xFFFFu;
+    ctx->r2 = 0;
+    if (!global_sprite_active(rdram, index)) return;
+
+    write_sprite_vec3(rdram, index, GLOBAL_SPRITE_SCALE,
+                      ctx_f32_arg(ctx->r5), ctx_f32_arg(ctx->r6), ctx_f32_arg(ctx->r7));
+    ctx->r2 = 1;
+}
+
+extern "C" RECOMP_PATCH void setSpriteRotation(uint8_t* rdram, recomp_context* ctx) {
+    uint32_t index = (uint32_t)ctx->r4 & 0xFFFFu;
+    ctx->r2 = 0;
+    if (!global_sprite_active(rdram, index)) return;
+
+    write_sprite_vec3(rdram, index, GLOBAL_SPRITE_ROT,
+                      ctx_f32_arg(ctx->r5), ctx_f32_arg(ctx->r6), ctx_f32_arg(ctx->r7));
+    ctx->r2 = 1;
+}
 
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
@@ -147,6 +521,9 @@ static void segv_handler(int, siginfo_t* si, void*) {
         "\n[CRASH] SIGSEGV at %p, last update fn: %s\n",
         si->si_addr, (const char*)g_last_update_fn);
     (void)write(STDERR_FILENO, buf, n);
+    void* frames[64];
+    int frame_count = backtrace(frames, 64);
+    backtrace_symbols_fd(frames, frame_count, STDERR_FILENO);
     _exit(1);
 }
 
@@ -343,13 +720,22 @@ extern "C" RECOMP_PATCH void mainproc(uint8_t* rdram, recomp_context* ctx) {
                     }
                 }
             }
-            RUN(updateEntities);
-            RUN(updateMapController);
-            RUN(updateMapGraphics);
-            RUN(updateNumberSprites);
-            RUN(updateSprites);
-            RUN(dmaSprites);
-            RUN(updateBitmaps);
+            const uint16_t active_cb = read_cb_idx(rdram);
+            if (s_no_world_geometry && (active_cb == TITLE_SCREEN_CALLBACK)) {
+                printf("[fix] title callback active; re-enabling sprite/bitmap updates\n");
+                fflush(stdout);
+                s_no_world_geometry = false;
+            }
+
+            if (!scene_has_no_world_geometry()) {
+                RUN(updateEntities);
+                RUN(updateMapController);
+                RUN(updateMapGraphics);
+                RUN(updateNumberSprites);
+                RUN(updateSprites);
+                RUN(dmaSprites);
+                RUN(updateBitmaps);
+            }
             RUN(updateMessageBox);
             RUN(updateDialogues);
 
@@ -359,23 +745,32 @@ extern "C" RECOMP_PATCH void mainproc(uint8_t* rdram, recomp_context* ctx) {
             if (s_title_forced && !s_diag_dumped && iter > 25) {
                 s_diag_dumped = true;
                 printf("\n========== TITLE SCREEN DIAGNOSTIC (iter=%u) ==========\n", iter); fflush(stdout);
-                constexpr uint32_t BITMAP_BASE = 0x80205500u;
-                constexpr uint32_t BITMAP_STRIDE = 0x30u;
-                for (uint32_t bi = 0; bi < 24; bi++) {
+                // bitmaps[MAX_BITMAPS] lives at 0x801F7110. BitmapObject is
+                // 0x58 bytes in the decomp layout; keep this diagnostic in
+                // logical RDRAM reads so host struct packing/endian cannot lie.
+                constexpr uint32_t BITMAP_BASE = 0x801F7110u;
+                constexpr uint32_t BITMAP_STRIDE = 0x58u;
+                for (uint32_t bi = 0; bi < 48; bi++) {
                     uint32_t bv = BITMAP_BASE + bi * BITMAP_STRIDE;
-                    uint32_t flags   = *(uint32_t*)(rdram + (bv - 0x80000000u));
+                    uint32_t flags   = rdram_ru16(rdram, bv + 0x56);
                     if (flags == 0) continue;
-                    uint32_t rndFlags= *(uint32_t*)(rdram + (bv + 4 - 0x80000000u));
-                    uint32_t spriteNo= *(uint16_t*)(rdram + ((bv + 8 ^ 2u) - 0x80000000u));
-                    uint32_t texPtr  = *(uint32_t*)(rdram + (bv + 0x10 - 0x80000000u));
-                    uint32_t palPtr  = *(uint32_t*)(rdram + (bv + 0x14 - 0x80000000u));
-                    uint32_t width   = *(uint16_t*)(rdram + ((bv + 0x1A ^ 2u) - 0x80000000u));
-                    uint32_t height  = *(uint16_t*)(rdram + ((bv + 0x1C ^ 2u) - 0x80000000u));
-                    uint32_t fmt     = *(uint8_t*)(rdram + ((bv + 0x1E ^ 3u) - 0x80000000u));
-                    uint32_t siz     = *(uint8_t*)(rdram + ((bv + 0x1F ^ 3u) - 0x80000000u));
-                    printf("[bitmap-%u] flags=0x%X rndFl=0x%X spr=%u tex=%08X pal=%08X %ux%u fmt=%u siz=%u\n",
-                           bi, flags, rndFlags, spriteNo, texPtr, palPtr, width, height, fmt, siz);
+                    uint32_t texPtr  = rdram_ru32(rdram, bv + 0x00);
+                    uint32_t palPtr  = rdram_ru32(rdram, bv + 0x04);
+                    uint32_t width   = rdram_ru32(rdram, bv + 0x08);
+                    uint32_t height  = rdram_ru32(rdram, bv + 0x0C);
+                    uint32_t fmt     = rdram_ru32(rdram, bv + 0x10);
+                    uint32_t siz     = rdram_ru32(rdram, bv + 0x14);
+                    uint32_t spriteNo= rdram_ru16(rdram, bv + 0x18);
+                    uint32_t vtxIdx  = rdram_ru16(rdram, bv + 0x1A);
+                    uint32_t render  = rdram_ru16(rdram, bv + 0x54);
+                    printf("[bitmap-logical-%u] flags=0x%X render=0x%X spr=%u vtx=%u tex=%08X pal=%08X %ux%u fmt=%u siz=%u\n",
+                           bi, flags, render, spriteNo, vtxIdx, texPtr, palPtr, width, height, fmt, siz);
                     fflush(stdout);
+                    if (bi < 8 || width > 1024 || height > 1024 ||
+                        texPtr < 0x80000000u || texPtr >= 0x80800000u ||
+                        palPtr < 0x80000000u || palPtr >= 0x80800000u) {
+                        dump_logical_bytes(rdram, bv, 0x40);
+                    }
                 }
             }
 
@@ -433,15 +828,14 @@ extern "C" RECOMP_PATCH void mainproc(uint8_t* rdram, recomp_context* ctx) {
                 bool opening_stuck = (seg == 30 && iter >= 10) ||
                                      (csidx >= 1450 && csidx <= 1499 && iter >= 10);
                 if (opening_stuck && !s_title_forced) {
-                    printf("[fix] Setting completion flags for opening transition: seg=%u csidx=%u iter=%u\n",
+                    printf("[fix] Forcing title screen after opening transition stall: seg=%u csidx=%u iter=%u\n",
                            seg, csidx, iter);
                     fflush(stdout);
                     *(int32_t*)(rdram + (0x801891D4u - 0x80000000u)) = 0x8001;
+                    ctx->r4 = 0;
+                    initializeTitleScreen(rdram, ctx);
+                    s_no_world_geometry = false;
                     s_title_forced = true;
-                    // Do NOT switch callback here. On the next iteration, mainGameLoopCallback
-                    // (cb=1) will see cscompl=0x8001, enter handleCutsceneCompletion,
-                    // and call initializeTitleScreen(0) which internally calls
-                    // setMainLoopCallbackFunctionIndex(TITLE_SCREEN).
                 }
             }
             // --------------------
@@ -938,24 +1332,24 @@ extern "C" RECOMP_PATCH void setupCameraMatrices(uint8_t* rdram, recomp_context*
     if (perspMode == 0) {
         // guOrtho(&mat->projection, l, r, t, b, n, f, 0.9999f)
         ctx->r4 = mat;  // &projection = mat+0 for Mtx at start
-        ctx->r5 = MEM_W(cam, 0x80);  // l
-        ctx->r6 = MEM_W(cam, 0x84);  // r
-        ctx->r7 = MEM_W(cam, 0x88);  // t (b in some orderings — use as-is)
-        MEM_W(0x10, ctx->r29) = MEM_W(cam, 0x8C);
-        MEM_W(0x14, ctx->r29) = MEM_W(cam, 0x90);
-        MEM_W(0x18, ctx->r29) = MEM_W(cam, 0x94);
+        ctx->r5 = MEM_W(0x80, cam);  // l
+        ctx->r6 = MEM_W(0x84, cam);  // r
+        ctx->r7 = MEM_W(0x88, cam);  // t
+        MEM_W(0x10, ctx->r29) = MEM_W(0x8C, cam);  // b
+        MEM_W(0x14, ctx->r29) = MEM_W(0x90, cam);  // n
+        MEM_W(0x18, ctx->r29) = MEM_W(0x94, cam);  // f
         uint32_t f_scale; float fs=0.9999f; __builtin_memcpy(&f_scale,&fs,4);
         MEM_W(0x1C, ctx->r29) = (int32_t)f_scale;
         guOrtho(rdram, ctx);
     } else if (perspMode == 1) {
         // guPerspective — skip for now, use ortho fallback
         ctx->r4 = mat;
-        ctx->r5 = MEM_W(cam, 0x80);
-        ctx->r6 = MEM_W(cam, 0x84);
-        ctx->r7 = MEM_W(cam, 0x88);
-        MEM_W(0x10, ctx->r29) = MEM_W(cam, 0x8C);
-        MEM_W(0x14, ctx->r29) = MEM_W(cam, 0x90);
-        MEM_W(0x18, ctx->r29) = MEM_W(cam, 0x94);
+        ctx->r5 = MEM_W(0x80, cam);
+        ctx->r6 = MEM_W(0x84, cam);
+        ctx->r7 = MEM_W(0x88, cam);
+        MEM_W(0x10, ctx->r29) = MEM_W(0x8C, cam);
+        MEM_W(0x14, ctx->r29) = MEM_W(0x90, cam);
+        MEM_W(0x18, ctx->r29) = MEM_W(0x94, cam);
         uint32_t f_scale; float fs=0.9999f; __builtin_memcpy(&f_scale,&fs,4);
         MEM_W(0x1C, ctx->r29) = (int32_t)f_scale;
         guOrtho(rdram, ctx);
@@ -964,33 +1358,31 @@ extern "C" RECOMP_PATCH void setupCameraMatrices(uint8_t* rdram, recomp_context*
     // guLookAt(&sceneMatrices.viewing, eye.x,eye.y,eye.z, at.x,at.y,at.z, up.x,up.y,up.z)
     // sceneMatrices.viewing is at offset 0x1C0 from mat (7th Mtx: 6×64+64=0x1C0)
     ctx->r4 = ADD32(mat, 0x1C0);
-    ctx->r5 = MEM_W(cam, 0xA8);  // eye.x
-    ctx->r6 = MEM_W(cam, 0xAC);  // eye.y
-    ctx->r7 = MEM_W(cam, 0xB0);  // eye.z
-    MEM_W(0x10, ctx->r29) = MEM_W(cam, 0xB4);  // at.x
-    MEM_W(0x14, ctx->r29) = MEM_W(cam, 0xB8);  // at.y
-    MEM_W(0x18, ctx->r29) = MEM_W(cam, 0xBC);  // at.z
-    MEM_W(0x1C, ctx->r29) = MEM_W(cam, 0xC0);  // up.x
-    MEM_W(0x20, ctx->r29) = MEM_W(cam, 0xC4);  // up.y
-    MEM_W(0x24, ctx->r29) = MEM_W(cam, 0xC8);  // up.z
+    ctx->r5 = MEM_W(0xA8, cam);  // eye.x
+    ctx->r6 = MEM_W(0xAC, cam);  // eye.y
+    ctx->r7 = MEM_W(0xB0, cam);  // eye.z
+    MEM_W(0x10, ctx->r29) = MEM_W(0xB4, cam);  // at.x
+    MEM_W(0x14, ctx->r29) = MEM_W(0xB8, cam);  // at.y
+    MEM_W(0x18, ctx->r29) = MEM_W(0xBC, cam);  // at.z
+    MEM_W(0x1C, ctx->r29) = MEM_W(0xC0, cam);  // up.x
+    MEM_W(0x20, ctx->r29) = MEM_W(0xC4, cam);  // up.y
+    MEM_W(0x24, ctx->r29) = MEM_W(0xC8, cam);  // up.z
     guLookAt(rdram, ctx);
 
     // Emit gSPMatrix commands for projection and viewing matrices.
-    // gSPMatrix(&projection, G_MTX_NOPUSH|G_MTX_LOAD|G_MTX_PROJECTION) = opcode 0xDA cmd
-    // opcode 0xDA000038 (G_MTX flags) | physical_addr
-    // Use the recompiled code pattern: DC080030 and DC080230 (from funcs_2 after_1)
-    // projection gSPMatrix written to dl:
+    // F3DEX2 gSPMatrix uses opcode 0xDA. The low byte is
+    // (G_MTX_* flags ^ G_MTX_PUSH), and bits 19..23 encode sizeof(Mtx).
     uint32_t proj_phys = (uint32_t)mat & 0x1FFFFFFFu;   // &projection physical
     uint32_t view_phys = ((uint32_t)mat + 0x1C0u) & 0x1FFFFFFFu;  // &viewing physical
 
-    MEM_W(0x0, dl) = (int32_t)0xDC080030u;  // gSPMatrix NOPUSH|LOAD|PROJECTION
+    MEM_W(0x0, dl) = (int32_t)0xDA380007u;  // PROJECTION|LOAD|NOPUSH
     MEM_W(0x4, dl) = (int32_t)proj_phys;
     dl = ADD32(dl, 0x8);
-    MEM_W(0x0, dl) = (int32_t)0xDC08030Au;  // gSPMatrix NOPUSH|MUL|PROJECTION
+    MEM_W(0x0, dl) = (int32_t)0xDA380006u;  // MODELVIEW|LOAD|NOPUSH
     MEM_W(0x4, dl) = (int32_t)view_phys;
     dl = ADD32(dl, 0x8);
 
-    ctx->r31 = MEM_W(ctx->r29, 0x3C);
+    ctx->r31 = MEM_W(0x3C, ctx->r29);
     ctx->r29 = ADD32(ctx->r29, 0x40);
     ctx->r2 = dl;  // return updated dl
 }
@@ -1088,8 +1480,19 @@ extern "C" RECOMP_PATCH void renderScene(uint8_t* rdram, recomp_context* ctx) {
     constexpr uint32_t SCENE_MATRICES_STRIDE = 0x290u;
     gpr scene_mat = (gpr)(int32_t)(SCENE_MATRICES_BASE + buf_idx * SCENE_MATRICES_STRIDE);
     
-    printf("[renderScene] dl_in=%p scene_mat=%p\n", (void*)(uint32_t)dl, (void*)(uint32_t)scene_mat);
-    fflush(stdout);
+    constexpr uint32_t GCAMERA = 0x801F6F38u;
+
+    if (rs_count < 5) {
+        printf("[renderScene] dl_in=%p camera=%p scene_mat=%p\n",
+               (void*)(uint32_t)dl, (void*)GCAMERA, (void*)(uint32_t)scene_mat);
+        fflush(stdout);
+    }
+
+    ctx->r4 = dl;
+    ctx->r5 = (gpr)(int32_t)GCAMERA;
+    ctx->r6 = scene_mat;
+    setupCameraMatrices(rdram, ctx);
+    dl = ctx->r2;
     
     ctx->r4 = dl;
     ctx->r5 = scene_mat;
@@ -1098,8 +1501,13 @@ extern "C" RECOMP_PATCH void renderScene(uint8_t* rdram, recomp_context* ctx) {
     
     // Log display list contents after renderSceneGraph
     uint32_t dl_size_bytes = (uint32_t)((uint32_t)dl - (uint32_t)(dl_start));
-    printf("[renderScene] dl_out=%p dl_size=%u\n", (void*)(uint32_t)dl, dl_size_bytes);
-    fflush(stdout);
+    if (s_title_forced && dl_size_bytes >= 512) {
+        software_blit_title_from_scene(rdram, (uint32_t)dl_start, dl_size_bytes);
+    }
+    if (rs_count < 5) {
+        printf("[renderScene] dl_out=%p dl_size=%u\n", (void*)(uint32_t)dl, dl_size_bytes);
+        fflush(stdout);
+    }
 
     if (rs_count < 5) {
         printf("[renderScene #%u] dumping dl_out (%u cmds):\n", rs_count, dl_size_bytes / 8);
@@ -1120,16 +1528,16 @@ extern "C" RECOMP_PATCH void renderScene(uint8_t* rdram, recomp_context* ctx) {
 
     // Dump sprite sub-DLs when title screen scene is active
     static bool dumped_title_scene = false;
-    if (!dumped_title_scene && s_title_forced && dl_size_bytes >= 368) {
+    if (!dumped_title_scene && s_title_forced && dl_size_bytes >= 64) {
         uint32_t* dl_words = (uint32_t*)(rdram + ((uint32_t)dl_start & 0x1FFFFFFFu));
         uint32_t n_cmds = dl_size_bytes / 8;
         int dl_count = 0;
-        for (uint32_t i = 0; i < n_cmds && dl_count < 3; i++) {
-            if ((dl_words[i*2] & 0xFF000000u) == 0xDE000000u) {
+        for (uint32_t i = 0; i < n_cmds && dl_count < 12; i++) {
+            if (((dl_words[i*2] & 0xFF000000u) == 0xDE000000u) && (i != 0)) {
                 uint32_t sub_dl_phys = dl_words[i*2+1];
                 printf("[title-scene-dl] #%d at 0x%08X\n", dl_count, sub_dl_phys);
                 uint32_t* subp = (uint32_t*)(rdram + (sub_dl_phys & 0x1FFFFFFFu));
-                for (int j = 0; j < 40 && (sub_dl_phys & 0x1FFFFFFFu) + j*8 < 0x800000u; j++) {
+                for (int j = 0; j < 24 && (sub_dl_phys & 0x1FFFFFFFu) + j*8 < 0x800000u; j++) {
                     printf("  +%03d: %08X %08X  (%s)\n", j*8, subp[j*2], subp[j*2+1], dl_cmd_name(subp[j*2]));
                     if (subp[j*2] == 0xDF000000u) break;
                 }

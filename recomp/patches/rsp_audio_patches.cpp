@@ -6,7 +6,7 @@
  * or the N64 RSP audio ucode.
  */
 
-#include "librecomp/recomp.h"
+#include "recomp.h"
 #include <cstdio>
 
 extern "C" {

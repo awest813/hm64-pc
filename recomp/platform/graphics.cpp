@@ -67,6 +67,7 @@ public:
     uint32_t vi_vburst   = 0;
     uint32_t vi_xscale   = 0;
     uint32_t vi_yscale   = 0;
+    uint32_t last_present_fb = 0;
 
     static uint32_t s_zero; // dummy register target for unused DPC regs
 
@@ -145,23 +146,54 @@ public:
     void send_dl(const OSTask* task) override {
         if (!app || !rdram) return;
 
-        printf("[hm64::gfx] send_dl called with task data_ptr=0x%llx\n", (unsigned long long)task->t.data_ptr);
-        fflush(stdout);
+        static uint32_t send_dl_log_count = 0;
+        if (send_dl_log_count++ < 24) {
+            printf("[hm64::gfx] send_dl called with task data_ptr=0x%llx size=%u\n",
+                   (unsigned long long)task->t.data_ptr,
+                   static_cast<uint32_t>(task->t.data_size));
+            fflush(stdout);
+        }
 
         // Ensure RT64's HLE GBI is initialized before processing the display list.
-        // Use symbol-based F3DEX2 microcode addresses to match GBI database.
-        // gspF3DEX2_fifoTextStart: 0x8010C970 (phys: 0x0010C970)
-        // Point data to text+0x420 as fallback for GBI matching
+        // Use HM64's actual gspF3DEX2_fifo symbols from hm64.map.
         if (app->interpreter) {
-            constexpr uint32_t F3DEX2_TEXT_PHYS = 0x0010C970u;
-            constexpr uint32_t F3DEX2_DATA_PHYS = 0x0010C970u + 0x420u;
+            constexpr uint32_t F3DEX2_TEXT_PHYS = 0x000EFA80u;
+            constexpr uint32_t F3DEX2_DATA_PHYS = 0x000FC7C0u;
             app->interpreter->loadUCodeGBI(F3DEX2_TEXT_PHYS, F3DEX2_DATA_PHYS, /*resetFromTask=*/true);
         }
 
         // data_ptr is a virtual address; strip the segment bits for a
-        // physical offset into RDRAM.
+        // physical offset into RDRAM. HM64 submits sceneGraphDisplayList for
+        // sprites/scene plus separate init/viewport tasks. The init and
+        // viewport tasks can still wedge or FPE RT64 in this partially patched
+        // boot path, so process scene DLs and present manually afterward.
         uint32_t dl_start = static_cast<uint32_t>(task->t.data_ptr) & 0x00FFFFFFu;
+        bool is_scene_task = dl_start >= 0x00180000u && dl_start < 0x00190000u;
+        if (!is_scene_task) {
+            static uint32_t skipped_dl_count = 0;
+            if (skipped_dl_count++ < 16) {
+                fprintf(stdout, "[hm64::gfx] skipping unknown DL task start=0x%06X\n", dl_start);
+                fflush(stdout);
+            }
+            return;
+        }
+
+        // The boot/logo path can submit a tiny placeholder scene DL before
+        // title assets exist. RT64 may hang while chasing that incomplete
+        // graph, which starves the real title DL queued behind it.
+        if (is_scene_task && task->t.data_size < 512) {
+            static uint32_t skipped_short_scene_count = 0;
+            if (skipped_short_scene_count++ < 8) {
+                fprintf(stdout,
+                        "[hm64::gfx] skipping short pre-title scene DL start=0x%06X size=%u\n",
+                        dl_start, static_cast<uint32_t>(task->t.data_size));
+                fflush(stdout);
+            }
+            return;
+        }
+
         app->processDisplayLists(rdram, dl_start, 0, /*isHLE=*/true);
+        app->updateScreen();
     }
 
     void update_screen() override {
@@ -185,10 +217,32 @@ public:
             vi_yscale   = vi->VI_Y_SCALE_REG;
         }
 
-        static uint32_t origin_log_count = 0;
-        if (origin_log_count++ < 5) {
-            printf("[update_screen] VI_ORIGIN_REG=0x%08X\n", vi_origin);
-            fflush(stdout);
+        if (rdram) {
+            // Some HM64 PC boot paths bypass the original VI mode setup or leave
+            // the runtime's dummy VI framebuffer active. Prefer NuSystem's
+            // current framebuffer pointer so RT64 scans out what the game just
+            // rendered instead of the dummy black buffer.
+            uint32_t cfbp = *reinterpret_cast<uint32_t*>(rdram + (0x80205750u & 0x1FFFFFFFu));
+            if (cfbp == 0 && (vi_origin == 0 || vi_width == 0)) {
+                cfbp = 0x8038F800u;
+            }
+
+            if (cfbp != 0) {
+                vi_origin = cfbp & 0x00FFFFFFu;
+                vi_width = 320;
+                vi_status = 0x0000320Eu;
+                vi_hstart = 0x006C02ECu;
+                vi_vstart = 0x002501FFu;
+                vi_xscale = 0x00000200u;
+                vi_yscale = 0x00000400u;
+
+                if (last_present_fb != cfbp) {
+                    fprintf(stdout, "[hm64::gfx] VI present fb=0x%08X origin=0x%06X width=%u\n",
+                            cfbp, vi_origin, vi_width);
+                    fflush(stdout);
+                    last_present_fb = cfbp;
+                }
+            }
         }
 
         app->updateScreen();

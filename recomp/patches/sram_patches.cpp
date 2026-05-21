@@ -27,7 +27,7 @@
  *   K1 uncached 0xA0XXXXXX → strip top 3 bits
  */
 
-#include "librecomp/recomp.h"
+#include "recomp.h"
 
 #include <cstdio>
 #include <cstdint>

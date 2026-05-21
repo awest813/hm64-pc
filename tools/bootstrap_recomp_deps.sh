@@ -3,11 +3,17 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-N64RECOMP_DIR="$ROOT_DIR/tools/n64recomp"
-RUNTIME_DIR="$ROOT_DIR/recomp/lib/N64ModernRuntime"
+N64RECOMP_REL="tools/n64recomp"
+RUNTIME_REL="recomp/lib/N64ModernRuntime"
+RT64_REL="recomp/lib/RT64"
+
+N64RECOMP_DIR="$ROOT_DIR/$N64RECOMP_REL"
+RUNTIME_DIR="$ROOT_DIR/$RUNTIME_REL"
+RT64_DIR="$ROOT_DIR/$RT64_REL"
 
 N64RECOMP_URL="https://github.com/N64Recomp/N64Recomp.git"
 RUNTIME_URL="https://github.com/N64Recomp/N64ModernRuntime.git"
+RT64_URL="https://github.com/rt64/rt64.git"
 
 log() {
     printf '[recomp-bootstrap] %s\n' "$1"
@@ -63,5 +69,37 @@ ensure_repo() {
 
 ensure_repo "$N64RECOMP_DIR" "CMakeLists.txt" "$N64RECOMP_URL"
 ensure_repo "$RUNTIME_DIR" "CMakeLists.txt" "$RUNTIME_URL"
+ensure_repo "$RT64_DIR" "CMakeLists.txt" "$RT64_URL"
+
+log "Initializing nested dependency submodules..."
+if ! git -C "$ROOT_DIR" submodule update --init --recursive -- "$N64RECOMP_REL" "$RUNTIME_REL" "$RT64_REL"; then
+    warn "Some dependencies are not registered as submodules in this checkout; validating existing checkouts instead."
+fi
+
+if [[ -e "$N64RECOMP_DIR/.git" ]]; then
+    git -C "$N64RECOMP_DIR" submodule update --init --recursive
+fi
+
+if [[ -e "$RUNTIME_DIR/.git" ]]; then
+    git -C "$RUNTIME_DIR" submodule update --init --recursive
+fi
+
+if [[ -e "$RT64_DIR/.git" ]]; then
+    git -C "$RT64_DIR" submodule update --init --recursive
+fi
+
+required_files=(
+    "$N64RECOMP_DIR/CMakeLists.txt"
+    "$N64RECOMP_DIR/lib/fmt/CMakeLists.txt"
+    "$N64RECOMP_DIR/lib/tomlplusplus/CMakeLists.txt"
+    "$RUNTIME_DIR/CMakeLists.txt"
+    "$RUNTIME_DIR/N64Recomp/CMakeLists.txt"
+    "$RUNTIME_DIR/thirdparty/miniz/CMakeLists.txt"
+    "$RT64_DIR/CMakeLists.txt"
+)
+
+for required_file in "${required_files[@]}"; do
+    [[ -f "$required_file" ]] || fail "Missing required dependency file: $required_file"
+done
 
 log "All recomp dependencies are ready."

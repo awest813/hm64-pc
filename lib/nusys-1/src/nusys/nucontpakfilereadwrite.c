@@ -5,7 +5,7 @@ void nuContPakFileReadWrite(NUContPakFile *file, s32 offset, s32 size, u8* buf, 
     OSMesg rtnMesgBuf;
     NUContPakFileRWMesg rwMesg;
 
-#ifdef 
+#ifdef NU_DEBUG
 
     if (size & 0x1f) {
         osSyncPrintf("nuContPakFileReadWrite: data size(%X) must be  multiple 32.\n", size);
