@@ -1,14 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Recomp dependencies are VENDORED directly into this repository (under
-# tools/n64recomp, recomp/lib/N64ModernRuntime, and recomp/lib/RT64), so no
-# network access or git submodules are required. Older snapshots fetched these
-# via `git clone`; if this script is run on such a checkout it will also restore
-# the nested submodules vendored under recomp/output-funcs-style clones.
-#
-# This script only VALIDATES that the vendored dependency sources are present
-# and complete. It intentionally performs no cloning.
+# Recomp dependencies are VENDORED directly into this repository under
+# tools/n64recomp, recomp/lib/N64ModernRuntime, and recomp/lib/RT64, so a fresh
+# clone or ZIP download needs no submodules and no network fetch. This script
+# validates that those vendored sources are present and complete. It performs no
+# cloning or downloading.
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
@@ -42,13 +39,13 @@ for required_file in "${required_files[@]}"; do
     if [[ -f "$required_file" ]]; then
         log "OK  ${required_file#$ROOT_DIR/}"
     else
-        fail "Missing vendored dependency file: ${required_file#$ROOT_DIR/}"
+        printf '[recomp-bootstrap] MISSING %s\n' "${required_file#$ROOT_DIR/}" >&2
         missing=1
     fi
 done
 
 if [[ "$missing" -ne 0 ]]; then
-    exit 1
+    fail "One or more vendored dependency files are missing. Re-clone or re-download this repository."
 fi
 
 log "All vendored recomp dependencies are ready."
