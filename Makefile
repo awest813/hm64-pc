@@ -1154,7 +1154,7 @@ MAKEFLAGS += --no-builtin-rules
 # n64recomp – PC port targets
 # ---------------------------------------------------------------------------
 # Directory layout:
-#   tools/n64recomp/     – N64Recomp tool (git submodule)
+#   tools/n64recomp/     – N64Recomp tool (vendored dependency)
 #   recomp/              – PC port source tree
 #   recomp/output/funcs/ – Generated per-function C files (build artifact)
 

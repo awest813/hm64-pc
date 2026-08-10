@@ -59,9 +59,9 @@ recomp/build/
 tools/n64recomp/build/
 /tools/build/mkldscript
 
-# Local fallback clones used when submodule gitlinks are unavailable
-tools/n64recomp/
-recomp/lib/N64ModernRuntime/
+# Recomp dependencies are vendored into the repo (tools/n64recomp,
+# recomp/lib/N64ModernRuntime, recomp/lib/RT64) so a download needs no
+# submodules or network access. Build output stays ignored below.
 
 # Debian packages
 *.deb

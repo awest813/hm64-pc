@@ -2,8 +2,16 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-ROM_PATH="${1:-$ROOT_DIR/baserom.us.z64}"
+SKIP_ROM=0
+ROM_PATH="$ROOT_DIR/baserom.us.z64"
 ROM_SHA1_EXPECTED="90631460f1876a14849df0541d534012b410a34c"
+
+for arg in "$@"; do
+    case "$arg" in
+        --skip-rom) SKIP_ROM=1 ;;
+        *) ROM_PATH="$arg" ;;
+    esac
+done
 
 status=0
 
@@ -85,6 +93,12 @@ else
     fail "Missing recomp/lib/N64ModernRuntime. Run: make recomp-deps"
 fi
 
+if [[ -f "$ROOT_DIR/recomp/lib/RT64/CMakeLists.txt" ]]; then
+    pass "Found RT64 source (recomp/lib/RT64, vendored)"
+else
+    fail "Missing recomp/lib/RT64. Run: make recomp-deps"
+fi
+
 if command -v c++ >/dev/null 2>&1; then
     tmp_cpp="$(mktemp --suffix=.cpp)"
     tmp_bin="$(mktemp)"
@@ -97,20 +111,24 @@ if command -v c++ >/dev/null 2>&1; then
     rm -f "$tmp_cpp" "$tmp_bin"
 fi
 
-if [[ -f "$ROM_PATH" ]]; then
-    pass "Found ROM: $ROM_PATH"
-    if command -v sha1sum >/dev/null 2>&1; then
-        rom_sha1="$(sha1sum "$ROM_PATH" | awk '{print $1}')"
-        if [[ "$rom_sha1" == "$ROM_SHA1_EXPECTED" ]]; then
-            pass "ROM SHA-1 matches expected US version"
+if [[ "$SKIP_ROM" -eq 1 ]]; then
+    warn "ROM checks skipped (--skip-rom); this validates toolchain and deps only."
+else
+    if [[ -f "$ROM_PATH" ]]; then
+        pass "Found ROM: $ROM_PATH"
+        if command -v sha1sum >/dev/null 2>&1; then
+            rom_sha1="$(sha1sum "$ROM_PATH" | awk '{print $1}')"
+            if [[ "$rom_sha1" == "$ROM_SHA1_EXPECTED" ]]; then
+                pass "ROM SHA-1 matches expected US version"
+            else
+                fail "ROM SHA-1 mismatch (got $rom_sha1, expected $ROM_SHA1_EXPECTED)"
+            fi
         else
-            fail "ROM SHA-1 mismatch (got $rom_sha1, expected $ROM_SHA1_EXPECTED)"
+            warn "sha1sum not available; skipped ROM hash validation."
         fi
     else
-        warn "sha1sum not available; skipped ROM hash validation."
+        fail "Missing ROM at $ROM_PATH (expected baserom.us.z64)"
     fi
-else
-    fail "Missing ROM at $ROM_PATH (expected baserom.us.z64)"
 fi
 
 if command -v pkg-config >/dev/null 2>&1; then

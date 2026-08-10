@@ -97,7 +97,7 @@ Goal: reduce contributor setup friction and improve maintainability.
 | `make help` onboarding target | ✅ |
 | Actionable preflight diagnostics | ✅ |
 | Idempotent local setup script | ✅ |
-| Recomp dependency fallback when submodule gitlinks are absent | ✅ |
+| Recomp dependencies vendored (no submodules/network needed) | ✅ |
 | Documented debug build flow | ✅ |
 | Patch/runtime internals documentation | ✅ |
 | CI workflow for automated validation | 📋 |

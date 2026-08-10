@@ -8,8 +8,8 @@
 #
 # Dependencies:
 #   - SDL2 (system package: libsdl2-dev)
-#   - N64ModernRuntime (git submodule at lib/N64ModernRuntime/)
-#   - RT64 (git submodule at lib/RT64/)
+#   - N64ModernRuntime (vendored at lib/N64ModernRuntime/)
+#   - RT64 (vendored at lib/RT64/)
 #
 # Typical usage (from the repo root):
 #   make recomp-generate   # produce output/funcs/*.c

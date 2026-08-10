@@ -4,8 +4,9 @@ This list tracks currently known limitations for public testing.
 
 ## Build / Setup
 
-- In some branch snapshots, recomp dependencies may not be available as active git submodules.
-  - Mitigation: run `make recomp-deps` (uses submodule init when possible, clone fallback otherwise).
+- Recomp dependencies (`tools/n64recomp`, `recomp/lib/N64ModernRuntime`, `recomp/lib/RT64`) are vendored
+  into the repository, so no submodules or network fetches are required for a fresh clone/ZIP download.
+  - Mitigation: if files are missing/corrupt, run `make recomp-deps` to validate them (it no longer downloads).
 - Some minimal Linux images may have incomplete C++ linker setup (`-lstdc++` failures during CMake configure).
   - Mitigation: install full C++ toolchain (`g++` / libstdc++ dev packages), then run `make doctor`.
 - Missing SDL2 headers will fail PC build configuration.

@@ -86,6 +86,12 @@ git clone https://github.com/awest813/hm64-pc.git
 cd hm64-pc
 ```
 
+> All build dependencies are **vendored directly into this repository**:
+> `tools/n64recomp`, `recomp/lib/N64ModernRuntime`, and `recomp/lib/RT64`
+> (including the HM64-specific HLE/title rendering fixes). A fresh clone or
+> GitHub ZIP download contains everything except the game ROM — no submodules,
+> no extra network fetches.
+
 ### 2) Bootstrap tools/deps
 
 Ubuntu/WSL (recommended):
@@ -100,7 +106,7 @@ If your system packages are already installed:
 tools/setup.sh
 ```
 
-### 3) Fetch recomp runtime/tool dependencies
+### 3) Verify recomp runtime/tool dependencies (vendored, no download)
 
 ```sh
 make recomp-deps
