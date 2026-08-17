@@ -480,7 +480,11 @@ help:
 doctor:
 	@bash "$(DOCTOR_SCRIPT)"
 
-pc: doctor setup recomp
+# Idempotent offline bootstrap: vendored toolchain + Python wheels + helpers.
+bootstrap:
+	@bash tools/setup.sh
+
+pc: bootstrap setup doctor recomp
 	@echo "[pc] Success. Run ./recomp/build/hm64_pc"
 
 # Lightweight decomp preflight before invoking the MIPS compiler.
