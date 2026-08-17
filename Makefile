@@ -474,6 +474,7 @@ help:
 	@echo "  make recomp          - full PC port pipeline (ROM -> ELF -> recomp -> hm64_pc)"
 	@echo "  make recomp-build    - build PC binary from generated recomp/output/funcs/"
 	@echo "  make pc              - recommended first-time PC build flow"
+	@echo "  make pc JOBS=1       - same, but limit PC build parallelism (low RAM/WSL)"
 	@echo "  make clean           - clean build outputs"
 
 doctor:
@@ -1163,12 +1164,16 @@ RECOMP_TOML        := recomp/hm64.us.toml
 RECOMP_OUTPUT_DIR  := recomp/output
 RECOMP_BUILD_DIR   := recomp/build
 
+# Parallel build jobs for the PC port. Defaults to all cores; on memory-
+# constrained machines (e.g. small WSL VMs) override with: make pc JOBS=1
+JOBS               ?= $(shell nproc)
+
 # Build the N64Recomp tool itself from source
 $(N64RECOMP_TOOL): recomp-deps
 	@echo "[recomp] Building N64Recomp tool..."
 	@mkdir -p tools/n64recomp/build
 	cmake -S tools/n64recomp -B tools/n64recomp/build -DCMAKE_BUILD_TYPE=Release
-	cmake --build tools/n64recomp/build --parallel
+	cmake --build tools/n64recomp/build --parallel $(JOBS)
 
 # Run N64Recomp on the compiled ELF to generate per-function C files.
 # Depends on the decomp ELF being up-to-date first.
@@ -1188,7 +1193,7 @@ recomp-build: recomp-deps
 	@echo "[recomp] Building PC port..."
 	@mkdir -p $(RECOMP_BUILD_DIR)
 	cmake -S recomp -B $(RECOMP_BUILD_DIR) -DCMAKE_BUILD_TYPE=Release
-	cmake --build $(RECOMP_BUILD_DIR) --parallel
+	cmake --build $(RECOMP_BUILD_DIR) --parallel $(JOBS)
 	@echo "[recomp] PC binary: $(RECOMP_BUILD_DIR)/hm64_pc"
 
 # Convenience target: run the full recomp pipeline (ELF → generate → build)

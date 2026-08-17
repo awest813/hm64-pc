@@ -246,6 +246,15 @@ You must place `baserom.us.z64` in the repository root, or use the runtime CLI R
 
 Install a full C++ toolchain (`g++` / libstdc++ development packages), then rerun `make doctor`.
 
+### Build dies or WSL crashes during `make pc` (out of memory)
+
+The PC build compiles large C++ dependencies (RT64, N64ModernRuntime) in parallel using all
+CPU cores. On memory-constrained machines (especially small WSL2 VMs), limit parallelism:
+
+```sh
+make pc JOBS=1
+```
+
 ### `SDL2` not found during CMake
 
 Install SDL2 development headers (`libsdl2-dev` on Ubuntu/WSL).
