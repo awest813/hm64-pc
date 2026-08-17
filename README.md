@@ -96,16 +96,14 @@ cd hm64-pc
 
 ### 2) Bootstrap tools/deps
 
-Ubuntu/WSL (recommended):
+`make pc` runs `tools/setup.sh` (vendored toolchain, Python wheels, helpers) automatically and is
+idempotent, so a plain `make pc` handles bootstrap + setup + doctor for you.
+
+If you'd rather bootstrap explicitly first (or need system-level packages):
 
 ```sh
-tools/setup.sh --install-system-deps
-```
-
-If your system packages are already installed:
-
-```sh
-tools/setup.sh
+tools/setup.sh            # vendored deps only
+tools/setup.sh --install-system-deps   # Ubuntu/WSL system packages too
 ```
 
 ### 3) Verify recomp runtime/tool dependencies (vendored, no download)
@@ -127,6 +125,9 @@ make doctor
 ```
 
 ### 6) Build PC test binary (full pipeline)
+
+`make pc` runs bootstrap, `setup` (asset extraction), `doctor` checks, and the recomp
+pipeline — recommended as the single first-time command:
 
 ```sh
 make pc

@@ -1138,7 +1138,7 @@ check: $(TARGET)
 	$(V)diff $(TARGET) $(BASEROM) && echo "OK"
 
 
-.PHONY: all help doctor pc preflight-decomp modern clean clean-assets setup split rerun check codesegment
+.PHONY: all help doctor bootstrap pc preflight-decomp modern clean clean-assets setup split rerun check codesegment
 .PHONY: extract-sprites extract-animation-metadata extract-animation-scripts
 .PHONY: extract-animation-sprites extract-animations extract-gifs
 .PHONY: extract-texts extract-map-sprites extract-cutscenes
