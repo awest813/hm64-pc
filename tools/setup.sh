@@ -15,8 +15,10 @@ Usage: tools/setup.sh [--install-system-deps]
 Bootstraps HM64 build prerequisites in a repeatable, re-runnable way.
 
 By default this script:
-  - installs/updates Python dependencies for the current user
-  - downloads the GCC 2.7.2 + binutils 2.6 toolchain into tools/gcc-2.7.2
+  - installs Python dependencies (user scope) from the vendored wheels in
+    tools/python-wheels, with no network access (PyPI fallback if that fails)
+  - verifies the vendored GCC 2.7.2 + binutils 2.6 toolchain in
+    tools/gcc-2.7.2 (downloads it only if unexpectedly missing)
   - builds tools/build/mkldscript
 
 Optional:
@@ -52,9 +54,9 @@ for arg in "$@"; do
 done
 
 command -v python3 >/dev/null 2>&1 || fail "python3 not found"
-command -v wget >/dev/null 2>&1 || fail "wget not found"
 command -v tar >/dev/null 2>&1 || fail "tar not found"
 command -v gcc >/dev/null 2>&1 || fail "gcc not found"
+command -v wget >/dev/null 2>&1 || warn "wget not found (only needed for toolchain download fallback)"
 
 if [[ "$INSTALL_SYSTEM_DEPS" -eq 1 ]]; then
     command -v sudo >/dev/null 2>&1 || fail "sudo is required for --install-system-deps"
@@ -63,7 +65,8 @@ if [[ "$INSTALL_SYSTEM_DEPS" -eq 1 ]]; then
     run "Installing toolchain/system dependencies" \
         sudo apt-get install -y \
             build-essential cmake ninja-build clang \
-            python3 python3-pip \
+            python3 python3-pip python3-setuptools python3-wheel \
+            libyaml-dev \
             binutils-mips-linux-gnu gcc-mips-linux-gnu \
             libsdl2-dev pkg-config
 else
@@ -73,17 +76,19 @@ fi
 mkdir -p "$KMC_DIR"
 
 if [[ ! -x "$KMC_DIR/gcc" ]]; then
+    warn "Vendored GCC 2.7.2 missing from tools/gcc-2.7.2; downloading fallback"
     run "Downloading GCC 2.7.2 toolchain" \
         bash -lc "wget -c \"https://github.com/decompals/mips-gcc-2.7.2/releases/download/main/gcc-2.7.2-linux.tar.gz\" -O - | tar -xz -C \"$KMC_DIR\""
 else
-    log "GCC 2.7.2 already present at tools/gcc-2.7.2/gcc"
+    log "GCC 2.7.2 found (vendored) at tools/gcc-2.7.2/gcc"
 fi
 
 if [[ ! -x "$KMC_DIR/as" ]]; then
+    warn "Vendored mips binutils 2.6 missing from tools/gcc-2.7.2; downloading fallback"
     run "Downloading mips binutils 2.6" \
         bash -lc "wget -c \"https://github.com/decompals/mips-binutils-2.6/releases/latest/download/binutils-2.6-linux.tar.gz\" -O - | tar -xz -C \"$KMC_DIR\""
 else
-    log "mips binutils already present at tools/gcc-2.7.2/as"
+    log "mips binutils found (vendored) at tools/gcc-2.7.2/as"
 fi
 
 run "Marking local toolchain binaries executable" \
@@ -97,8 +102,19 @@ run "Building mkldscript helper" \
 chmod +x "$MKLDSCRIPT_BIN"
 
 python3 -m pip --version >/dev/null 2>&1 || fail "python3 -m pip is unavailable"
-run "Installing Python dependencies (user scope)" \
-    python3 -m pip install --user -U -r "$REQ_FILE" || \
-    python3 -m pip install --user --break-system-packages -U -r "$REQ_FILE"
+PIP_FLAGS=()
+if python3 -c "import sysconfig" 2>/dev/null && \
+   [[ -f "$(python3 -c 'import sysconfig; print(sysconfig.get_path("stdlib"))')/EXTERNALLY-MANAGED" ]]; then
+    PIP_FLAGS+=(--break-system-packages)
+fi
+WHEELS_DIR="$ROOT_DIR/tools/python-wheels"
+if [[ -d "$WHEELS_DIR" ]] && ls "$WHEELS_DIR"/*.whl >/dev/null 2>&1; then
+    run "Installing Python dependencies from vendored wheels (offline)" \
+        python3 -m pip install --user "${PIP_FLAGS[@]}" --no-index --find-links "$WHEELS_DIR" -r "$REQ_FILE"
+else
+    warn "Vendored wheels missing from tools/python-wheels; falling back to PyPI"
+    run "Installing Python dependencies from PyPI" \
+        python3 -m pip install --user "${PIP_FLAGS[@]}" -U -r "$REQ_FILE"
+fi
 
 log "Done. Next recommended command: make doctor"

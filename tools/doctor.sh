@@ -66,9 +66,15 @@ else
 fi
 
 if [[ -x "$ROOT_DIR/tools/gcc-2.7.2/gcc" ]]; then
-    pass "Found local GCC 2.7.2 toolchain (tools/gcc-2.7.2/gcc)"
+    pass "Found local GCC 2.7.2 toolchain (tools/gcc-2.7.2/gcc, vendored)"
 else
     fail "Missing local GCC 2.7.2 toolchain. Run: tools/setup.sh"
+fi
+
+if [[ -x "$ROOT_DIR/tools/gcc-2.7.2/as" ]]; then
+    pass "Found local mips binutils (tools/gcc-2.7.2/as, vendored)"
+else
+    fail "Missing local mips binutils. Run: tools/setup.sh"
 fi
 
 if [[ -x "$ROOT_DIR/tools/build/mkldscript" ]]; then

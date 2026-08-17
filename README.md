@@ -88,9 +88,11 @@ cd hm64-pc
 
 > All build dependencies are **vendored directly into this repository**:
 > `tools/n64recomp`, `recomp/lib/N64ModernRuntime`, and `recomp/lib/RT64`
-> (including the HM64-specific HLE/title rendering fixes). A fresh clone or
-> GitHub ZIP download contains everything except the game ROM — no submodules,
-> no extra network fetches.
+> (including the HM64-specific HLE/title rendering fixes), plus the
+> GCC 2.7.2 / binutils 2.6 N64 toolchain (`tools/gcc-2.7.2`) and all pinned
+> Python wheels (`tools/python-wheels`). A fresh clone or GitHub ZIP download
+> contains everything except the game ROM — no submodules, no extra network
+> fetches.
 
 ### 2) Bootstrap tools/deps
 

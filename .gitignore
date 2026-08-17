@@ -36,7 +36,6 @@ asm/
 bin/
 build/
 expected/
-tools/gcc-2.7.2
 __pycache__
 .vscode
 undefined_syms_auto.txt
@@ -61,7 +60,10 @@ tools/n64recomp/build/
 
 # Recomp dependencies are vendored into the repo (tools/n64recomp,
 # recomp/lib/N64ModernRuntime, recomp/lib/RT64) so a download needs no
-# submodules or network access. Build output stays ignored below.
+# submodules or network access. The GCC 2.7.2 + binutils 2.6 N64 toolchain
+# (tools/gcc-2.7.2) and pinned Python wheels (tools/python-wheels) are also
+# vendored, so setup.sh needs no third-party downloads. Build output stays
+# ignored below.
 
 # Debian packages
 *.deb
