@@ -53,11 +53,6 @@ for arg in "$@"; do
     esac
 done
 
-command -v python3 >/dev/null 2>&1 || fail "python3 not found"
-command -v tar >/dev/null 2>&1 || fail "tar not found"
-command -v gcc >/dev/null 2>&1 || fail "gcc not found"
-command -v wget >/dev/null 2>&1 || warn "wget not found (only needed for toolchain download fallback)"
-
 if [[ "$INSTALL_SYSTEM_DEPS" -eq 1 ]]; then
     command -v sudo >/dev/null 2>&1 || fail "sudo is required for --install-system-deps"
     run "Installing Ubuntu/WSL system packages" \
@@ -68,10 +63,15 @@ if [[ "$INSTALL_SYSTEM_DEPS" -eq 1 ]]; then
             python3 python3-pip python3-setuptools python3-wheel \
             libyaml-dev \
             binutils-mips-linux-gnu gcc-mips-linux-gnu \
-            libsdl2-dev pkg-config
+            libsdl2-dev libdbus-1-dev pkg-config wget git
 else
     warn "Skipping apt package install. Use --install-system-deps on Ubuntu/WSL."
 fi
+
+command -v python3 >/dev/null 2>&1 || fail "python3 not found"
+command -v tar >/dev/null 2>&1 || fail "tar not found"
+command -v gcc >/dev/null 2>&1 || fail "gcc not found"
+command -v wget >/dev/null 2>&1 || warn "wget not found (only needed for toolchain download fallback)"
 
 mkdir -p "$KMC_DIR"
 

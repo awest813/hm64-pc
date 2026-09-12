@@ -55,6 +55,10 @@ check_cmd python3 "install python3"
 check_cmd gcc "install build-essential"
 check_cmd c++ "install g++ (or build-essential)"
 check_cmd cmake "install cmake"
+check_cmd make "install build-essential"
+check_cmd mips-linux-gnu-as "install binutils-mips-linux-gnu"
+check_cmd mips-linux-gnu-ld "install binutils-mips-linux-gnu"
+check_cmd mips-linux-gnu-objcopy "install binutils-mips-linux-gnu"
 check_cmd git "install git"
 check_cmd wget "install wget"
 check_cmd tar "install tar"
@@ -83,26 +87,14 @@ else
     fail "Missing mkldscript helper. Run: tools/setup.sh"
 fi
 
-# check_python_module splat "run: tools/setup.sh"  # disabled for Python 3.13 compat
+check_python_module splat "run: tools/setup.sh"
 check_python_module PIL "run: tools/setup.sh"
 check_python_module numpy "run: tools/setup.sh"
 
-if [[ -f "$ROOT_DIR/tools/n64recomp/CMakeLists.txt" ]]; then
-    pass "Found N64Recomp source (tools/n64recomp)"
+if bash "$ROOT_DIR/tools/bootstrap_recomp_deps.sh"; then
+    pass "Vendored dependencies (including nested sources) are complete"
 else
-    fail "Missing tools/n64recomp. Run: make recomp-deps"
-fi
-
-if [[ -f "$ROOT_DIR/recomp/lib/N64ModernRuntime/CMakeLists.txt" ]]; then
-    pass "Found N64ModernRuntime source (recomp/lib/N64ModernRuntime)"
-else
-    fail "Missing recomp/lib/N64ModernRuntime. Run: make recomp-deps"
-fi
-
-if [[ -f "$ROOT_DIR/recomp/lib/RT64/CMakeLists.txt" ]]; then
-    pass "Found RT64 source (recomp/lib/RT64, vendored)"
-else
-    fail "Missing recomp/lib/RT64. Run: make recomp-deps"
+    fail "Vendored dependency verification failed"
 fi
 
 if command -v c++ >/dev/null 2>&1; then
@@ -138,13 +130,20 @@ else
 fi
 
 if command -v pkg-config >/dev/null 2>&1; then
+    for package in dbus-1; do
+        if pkg-config --exists "$package"; then
+            pass "Development package found: $package"
+        else
+            fail "Missing $package development files; run tools/setup.sh --install-system-deps"
+        fi
+    done
     if pkg-config --exists sdl2; then
         pass "SDL2 development package found via pkg-config"
     else
-        warn "SDL2 development package not found (install libsdl2-dev)"
+        fail "SDL2 development package not found (install libsdl2-dev)"
     fi
 else
-    warn "pkg-config not found; skipped SDL2 package check."
+    fail "pkg-config not found; install pkg-config."
 fi
 
 if [[ "$status" -eq 0 ]]; then

@@ -91,8 +91,10 @@ cd hm64-pc
 > (including the HM64-specific HLE/title rendering fixes), plus the
 > GCC 2.7.2 / binutils 2.6 N64 toolchain (`tools/gcc-2.7.2`) and all pinned
 > Python wheels (`tools/python-wheels`). A fresh clone or GitHub ZIP download
-> contains everything except the game ROM — no submodules, no extra network
-> fetches.
+> includes the nested former submodule sources as ordinary tracked files.
+> `make recomp-deps` verifies every file against `tools/recomp-deps.manifest`.
+> No submodule initialization is needed. System packages must still be installed.
+> The bundled toolchain and Python wheels target Ubuntu 24.04 x86-64 (Python 3.12).
 
 ### 2) Bootstrap tools/deps
 
@@ -110,6 +112,12 @@ tools/setup.sh --install-system-deps   # Ubuntu/WSL system packages too
 
 ```sh
 make recomp-deps
+```
+
+After staging additions or removals in vendored libraries, refresh the tracked-file manifest:
+
+```sh
+git ls-files tools/n64recomp recomp/lib/N64ModernRuntime recomp/lib/RT64 > tools/recomp-deps.manifest
 ```
 
 ### 4) Place ROM in repo root

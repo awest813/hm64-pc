@@ -9,10 +9,6 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-N64RECOMP_DIR="$ROOT_DIR/tools/n64recomp"
-RUNTIME_DIR="$ROOT_DIR/recomp/lib/N64ModernRuntime"
-RT64_DIR="$ROOT_DIR/recomp/lib/RT64"
-
 log() {
     printf '[recomp-bootstrap] %s\n' "$1"
 }
@@ -22,22 +18,17 @@ fail() {
     exit 1
 }
 
-required_files=(
-    "$N64RECOMP_DIR/CMakeLists.txt"
-    "$N64RECOMP_DIR/src/main.cpp"
-    "$N64RECOMP_DIR/lib/fmt/CMakeLists.txt"
-    "$N64RECOMP_DIR/lib/tomlplusplus/CMakeLists.txt"
-    "$RUNTIME_DIR/CMakeLists.txt"
-    "$RUNTIME_DIR/N64Recomp/CMakeLists.txt"
-    "$RUNTIME_DIR/thirdparty/miniz/CMakeLists.txt"
-    "$RT64_DIR/CMakeLists.txt"
-    "$RT64_DIR/src/hle/rt64_interpreter.cpp"
-)
+MANIFEST="$ROOT_DIR/tools/recomp-deps.manifest"
+[[ -s "$MANIFEST" ]] || fail "Missing dependency manifest: $MANIFEST"
 
+log "Checking vendored dependency files (including nested sources)..."
 missing=0
-for required_file in "${required_files[@]}"; do
+count=0
+mapfile -t required_files < "$MANIFEST"
+for relative_path in "${required_files[@]}"; do
+    required_file="$ROOT_DIR/$relative_path"
     if [[ -f "$required_file" ]]; then
-        log "OK  ${required_file#$ROOT_DIR/}"
+        count=$((count + 1))
     else
         printf '[recomp-bootstrap] MISSING %s\n' "${required_file#$ROOT_DIR/}" >&2
         missing=1
@@ -48,4 +39,4 @@ if [[ "$missing" -ne 0 ]]; then
     fail "One or more vendored dependency files are missing. Re-clone or re-download this repository."
 fi
 
-log "All vendored recomp dependencies are ready."
+log "All $count vendored dependency files are present (including nested former submodules)."

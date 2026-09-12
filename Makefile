@@ -484,7 +484,11 @@ doctor:
 bootstrap:
 	@bash tools/setup.sh
 
-pc: bootstrap setup doctor recomp
+pc:
+	$(MAKE) bootstrap
+	$(MAKE) doctor
+	$(MAKE) setup
+	$(MAKE) recomp
 	@echo "[pc] Success. Run ./recomp/build/hm64_pc"
 
 # Lightweight decomp preflight before invoking the MIPS compiler.
@@ -540,7 +544,10 @@ split:
 # only extract what's needed and don't generate linker script
 	$(V)$(PYTHON) -m splat split ./config/$(REGION)/splat.$(REGION).yaml --modes code bin animationScripts seq hm64map
 
-setup: clean split extract-sprites extract-fonts
+setup:
+	$(MAKE) clean
+	$(MAKE) split
+	$(MAKE) extract-sprites extract-fonts
 
 rerun: clean $(LD_SCRIPT) check
 
@@ -1201,7 +1208,10 @@ recomp-build: recomp-deps
 	@echo "[recomp] PC binary: $(RECOMP_BUILD_DIR)/hm64_pc"
 
 # Convenience target: run the full recomp pipeline (ELF → generate → build)
-recomp: $(BASENAME).z64 recomp-generate recomp-build
+recomp:
+	$(MAKE) $(BASENAME).z64
+	$(MAKE) recomp-generate
+	$(MAKE) recomp-build
 
 recomp-deps:
 	@bash "$(RECOMP_DEPS_SCRIPT)"
