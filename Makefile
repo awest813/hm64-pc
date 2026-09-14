@@ -1192,6 +1192,7 @@ recomp-generate: $(BASENAME).elf $(N64RECOMP_TOOL)
 	@echo "[recomp] Running N64Recomp on $(BASENAME).elf..."
 	@mkdir -p $(RECOMP_OUTPUT_DIR)/funcs
 	$(N64RECOMP_TOOL) $(RECOMP_TOML)
+	$(PYTHON) tools/generate_runtime_data.py --elf $(BASENAME).elf --config config/$(REGION)/splat.$(REGION).yaml --output $(RECOMP_OUTPUT_DIR)
 	@echo "[recomp] Generated C files written to $(RECOMP_OUTPUT_DIR)/funcs/"
 	@# Patch missing forward declarations for librecomp pak functions
 	@grep -q "osPfsNumFiles_recomp" $(RECOMP_OUTPUT_DIR)/funcs/funcs.h || \

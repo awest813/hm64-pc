@@ -8,6 +8,7 @@
  */
 
 #include "graphics.h"
+#include "hm64_runtime_data.h"
 #include "input.h"
 
 #include <ultramodern/ultramodern.hpp>
@@ -157,43 +158,14 @@ public:
         // Ensure RT64's HLE GBI is initialized before processing the display list.
         // Use HM64's actual gspF3DEX2_fifo symbols from hm64.map.
         if (app->interpreter) {
-            constexpr uint32_t F3DEX2_TEXT_PHYS = 0x000EFA80u;
-            constexpr uint32_t F3DEX2_DATA_PHYS = 0x000FC7C0u;
+            constexpr uint32_t F3DEX2_TEXT_PHYS = (hm64::build::sym_gspF3DEX2_fifoTextStart & 0x1FFFFFFFu);
+            constexpr uint32_t F3DEX2_DATA_PHYS = (hm64::build::sym_gspF3DEX2_fifoDataStart & 0x1FFFFFFFu);
             app->interpreter->loadUCodeGBI(F3DEX2_TEXT_PHYS, F3DEX2_DATA_PHYS, /*resetFromTask=*/true);
         }
 
-        // data_ptr is a virtual address; strip the segment bits for a
-        // physical offset into RDRAM. HM64 submits sceneGraphDisplayList for
-        // sprites/scene plus separate init/viewport tasks. The init and
-        // viewport tasks can still wedge or FPE RT64 in this partially patched
-        // boot path, so process scene DLs and present manually afterward.
-        uint32_t dl_start = static_cast<uint32_t>(task->t.data_ptr) & 0x00FFFFFFu;
-        bool is_scene_task = dl_start >= 0x00180000u && dl_start < 0x00190000u;
-        if (!is_scene_task) {
-            static uint32_t skipped_dl_count = 0;
-            if (skipped_dl_count++ < 16) {
-                fprintf(stdout, "[hm64::gfx] skipping unknown DL task start=0x%06X\n", dl_start);
-                fflush(stdout);
-            }
-            return;
-        }
-
-        // The boot/logo path can submit a tiny placeholder scene DL before
-        // title assets exist. RT64 may hang while chasing that incomplete
-        // graph, which starves the real title DL queued behind it.
-        if (is_scene_task && task->t.data_size < 512) {
-            static uint32_t skipped_short_scene_count = 0;
-            if (skipped_short_scene_count++ < 8) {
-                fprintf(stdout,
-                        "[hm64::gfx] skipping short pre-title scene DL start=0x%06X size=%u\n",
-                        dl_start, static_cast<uint32_t>(task->t.data_size));
-                fflush(stdout);
-            }
-            return;
-        }
-
+        // Each frame includes initialization, scene and final-sync tasks.
+        uint32_t dl_start = static_cast<uint32_t>(task->t.data_ptr) & 0x1FFFFFFFu;
         app->processDisplayLists(rdram, dl_start, 0, /*isHLE=*/true);
-        app->updateScreen();
     }
 
     void update_screen() override {
@@ -228,7 +200,9 @@ public:
             }
 
             if (cfbp != 0) {
-                vi_origin = cfbp & 0x00FFFFFFu;
+                // VI origin points one scanline into the framebuffer. RT64
+                // subtracts this offset when matching the GPU render target.
+                vi_origin = (cfbp & 0x00FFFFFFu) + 320u * 2u;
                 vi_width = 320;
                 vi_status = 0x0000320Eu;
                 vi_hstart = 0x006C02ECu;
@@ -315,18 +289,13 @@ bool run_rsp_task(uint8_t* rdram, const OSTask* task) {
 void on_vi_interrupt() {
     hm64_vi_count_increment();
 
-    hm64::input::poll();
     hm64_invoke_retrace_callback();
-
-    static bool s_quit_pushed = false;
-    if (hm64::input::should_quit() && !s_quit_pushed) {
-        SDL_Event quit_event{};
-        quit_event.type = SDL_QUIT;
-        SDL_PushEvent(&quit_event);
-        s_quit_pushed = true;
-    }
 }
 
-void update_gfx() {}
+void update_gfx() {
+    // SDL events must be pumped on the thread that created the window.
+    hm64::input::poll();
+    if (hm64::input::should_quit()) ultramodern::quit();
+}
 
 } // namespace hm64::graphics

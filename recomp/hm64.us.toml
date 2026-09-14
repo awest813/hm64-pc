@@ -5,8 +5,8 @@
 elf_path = "../hm64.elf"
 rom_file_path = "../baserom.us.z64"
 output_func_path = "output/funcs"
-# mainproc is the N64 entrypoint; N64Recomp renames it to recomp_entrypoint
-entrypoint = 0x80025D90
+# Use the boot entry stub, which establishes BSS and the NuSystem stack.
+entrypoint = 0x80025C00
 
 [patches]
 # RSP microcode blob - cannot be recompiled as MIPS, ignore it

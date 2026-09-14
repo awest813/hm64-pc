@@ -9,6 +9,9 @@
  */
 
 #include "recomp.h"
+#include "input.h"
+#include <algorithm>
+#include "hm64_runtime_data.h"
 #include "librecomp/game.hpp"
 #include "librecomp/addresses.hpp"
 #include "ultramodern/ultramodern.hpp"
@@ -53,10 +56,11 @@ extern "C" void log_rdram_event_external(const char* tag, uint8_t* arg_rdram, vo
     log_rdram_event(tag, arg_rdram, step_ptr);
 }
 
-// Stack in RDRAM BSS at 0x80222000, 32KB.
+// Private stack in expanded RDRAM, below the runtime heap at 0x81000000.
+// The previous stack at 0x80222000 overlapped the game's BSS.
 // renderSceneGraph + guRotateRPY + fcos + guOrtho etc. each use significant
 // stack depth through the VI thread retrace callback path.
-static constexpr uint32_t RETRACE_STACK_BASE = 0x80222000u;
+static constexpr uint32_t RETRACE_STACK_BASE = 0x80FF0000u;
 static constexpr uint32_t RETRACE_STACK_SIZE = 0x8000u;  // 32KB
 
 // stepMainLoop flag at VMA 0x80205208
@@ -102,8 +106,8 @@ static int s_task_slot = 0;
 // NuSystem globals – addresses confirmed from data_dump.toml:
 //   nuGfxFunc        vram = 0x80118050
 //   nuGfxSwapCfbFunc vram = 0x80118064
-static constexpr uint32_t NU_GFX_FUNC_ADDR      = 0x80118050u;
-static constexpr uint32_t NU_GFX_SWAP_FUNC_ADDR = 0x80118064u;
+static constexpr uint32_t NU_GFX_FUNC_ADDR      = hm64::build::sym_nuGfxFunc;
+static constexpr uint32_t NU_GFX_SWAP_FUNC_ADDR = hm64::build::sym_nuGfxSwapCfbFunc;
 
 static constexpr uint32_t CONT_PAK_ERROR_OFFSET = 8;
 
@@ -126,12 +130,13 @@ RECOMP_PATCH void gfxRetraceCallback(uint8_t* rdram, recomp_context* ctx) {
     rdram[(PENDING_GFX_NUM_ADDR ^ 3u) - 0x80000000u] = (uint8_t)pendingGfx;
 
     // engineStateFlags &= ~2 (clear bit 1)
-    constexpr uint32_t ENGINE_FLAGS_ADDR = 0x80205622u;
+    constexpr uint32_t ENGINE_FLAGS_ADDR = hm64::build::sym_engineStateFlags;
     uint16_t engFlags = *(uint16_t*)(rdram + ((ENGINE_FLAGS_ADDR ^ 2u) - 0x80000000u));
     engFlags &= ~2u;
     *(uint16_t*)(rdram + ((ENGINE_FLAGS_ADDR ^ 2u) - 0x80000000u)) = engFlags;
 
-    // readControllerData() - stubbed, skip
+    extern void readControllerData(uint8_t*, recomp_context*);
+    readControllerData(rdram, ctx);
 
     // handleGraphicsUpdate(pendingGfx) - this is where stepMainLoop gets set to 1
     extern void handleGraphicsUpdate(uint8_t* rdram, recomp_context* ctx);
@@ -221,7 +226,7 @@ RECOMP_PATCH void nuGfxInit(uint8_t* rdram, recomp_context* ctx) {
     // FrameBuf vram = 0x8010DD38
     // The framebuffers are at: 0x8038F800, 0x803B5000, 0x803DA800
     // Initialize FrameBuf array directly with correct framebuffer addresses
-    constexpr uint32_t FRAME_BUF_ARRAY_ADDR = 0x8010DD38u;
+    constexpr uint32_t FRAME_BUF_ARRAY_ADDR = hm64::build::sym_FrameBuf;
     constexpr uint32_t FB0_ADDR = 0x8038F800u;
     constexpr uint32_t FB1_ADDR = 0x803B5000u;
     constexpr uint32_t FB2_ADDR = 0x803DA800u;
@@ -259,9 +264,7 @@ RECOMP_PATCH void nuGfxInit(uint8_t* rdram, recomp_context* ctx) {
     // Set nuGfxUcode global: RDRAM[0x801C3F74] = &nugfx_ucode (0x8010DD30)
     // (Used by the real nuGfxTaskMgr but we bypass it.)
     constexpr uint32_t NU_GFX_UCODE_PTR = 0x801C3F74u;
-    uint32_t phys = NU_GFX_UCODE_PTR & 0x1FFFFFFFu;
-    rdram[phys+0] = 0x80; rdram[phys+1] = 0x10;
-    rdram[phys+2] = 0xDD; rdram[phys+3] = 0x30;
+    MEM_W(0, (gpr)(int32_t)NU_GFX_UCODE_PTR) = hm64::build::sym_nugfx_ucode;
 
     // Skip the rdpstateinit_dl display list submission – it crashes RT64
     // because the RDRAM layout doesn't match the ELF symbol addresses.
@@ -460,13 +463,33 @@ RECOMP_PATCH void updateAudio(uint8_t* rdram, recomp_context* ctx) {
 // ---------------------------------------------------------------------------
 
 RECOMP_PATCH void nuContInit(uint8_t* rdram, recomp_context* ctx) {
-    ctx->r2 = 0x01;  // report 1 controller connected
+    for (unsigned i = 0; i < 4; ++i) {
+        gpr status = (gpr)(int32_t)(hm64::build::sym_nuContStatus + i * 4);
+        MEM_H(0, status) = i == 0 ? 0x0001 /* CONT_ABSOLUTE */ : 0;
+        MEM_B(2, status) = 0;
+        MEM_B(3, status) = i == 0 ? 0 : 0x08 /* CONT_NO_RESPONSE_ERROR */;
+    }
+    ctx->r2 = 0x01;
 }
 
 RECOMP_PATCH void nuContDataGetAll(uint8_t* rdram, recomp_context* ctx) {
 }
 
 RECOMP_PATCH void nuContDataGetExAll(uint8_t* rdram, recomp_context* ctx) {
+    static uint16_t previous_buttons[4]{};
+    for (int i = 0; i < 4; ++i) {
+        uint16_t buttons = 0;
+        float x = 0, y = 0;
+        bool connected = hm64::input::get_input(i, &buttons, &x, &y);
+        gpr pad = ADD32(ctx->r4, i * 8);
+        MEM_H(0, pad) = buttons;
+        MEM_B(2, pad) = (int8_t)std::clamp(x * 127.0f, -80.0f, 80.0f);
+        MEM_B(3, pad) = (int8_t)std::clamp(y * 127.0f, -80.0f, 80.0f);
+        MEM_B(4, pad) = connected ? 0 : 0x08 /* CONT_NO_RESPONSE_ERROR */;
+        MEM_B(5, pad) = 0;
+        MEM_H(6, pad) = buttons & ~previous_buttons[i];
+        previous_buttons[i] = buttons;
+    }
 }
 
 RECOMP_PATCH void nuContDataGet(uint8_t* rdram, recomp_context* ctx) {
@@ -520,122 +543,31 @@ RECOMP_PATCH void osEPiLinkHandle(uint8_t* rdram, recomp_context* ctx) {
 }
 
 // ---------------------------------------------------------------------------
-// nuPiReadRom – ROM DMA with ELF→ROM layout correction.
-//
-// NuSystem passes rom_addr as a raw ROM offset stored in the ELF data section
-// (e.g. via _xxxSegmentRomStart linker symbols).  Due to a packing difference
-// between the original N64 ROM build and our decomp ELF relink, every segment
-// ROM address in the ELF is 0x4F10 bytes EARLIER than its actual position in
-// the ROM binary.  We apply a universal +0x4F10 correction here.
-//
-// Verified across: all cutscene banks, all sprite/texture/palette/index asset
-// segments (player, title, font, etc.).  The delta is exactly 0x4F10 for every
-// segment tested.
-//
-// r4 = rom_offset  – raw ROM offset from ELF symbol (needs +0x4F10)
-// r5 = buf_ptr     – RDRAM destination virtual address
-// r6 = size        – byte count
+// nuPiReadRom translates linked asset offsets using build-generated mappings.
+// No global delta is valid across independently relinked asset segments.
+// r4 = linked ROM offset, r5 = RDRAM destination, r6 = byte count.
 // ---------------------------------------------------------------------------
-static constexpr uint32_t ROM_LAYOUT_DELTA = 0x4F10u;
-
 RECOMP_PATCH void nuPiReadRom(uint8_t* rdram, recomp_context* ctx) {
-    uint32_t rom_offset_raw = (uint32_t)ctx->r4;
-    gpr      buf_ptr        = ctx->r5;
-    uint32_t size           = (uint32_t)ctx->r6;
-
-    // The title sprite path is entered through patched startup code before all
-    // linker-symbol data agrees with the ROM layout. Remap the stale title
-    // sprite segment bases to the ELF ROM addresses that match baserom.us.z64.
-    if ((rom_offset_raw >= 0x00D97140u) && (rom_offset_raw < 0x00DB0930u)) {
-        rom_offset_raw += 0x0001E0B0u; // title texture: 0xD97140 -> 0xDB51F0
-    }
-    else if ((rom_offset_raw == 0x00DB0930u) && (size == 0x20u)) {
-        rom_offset_raw = 0x00DCE9E0u;  // title asset index
-    }
-
-    auto rom_span = recomp::get_rom();
-    uint32_t rom_size = (uint32_t)rom_span.size();
-
-    auto rom_range_ok = [](uint32_t off, uint32_t len, uint32_t total) -> bool {
-        return len > 0 &&
-               len <= 0x1000000u &&
-               off < total &&
-               ((uint64_t)off + len <= (uint64_t)total);
-    };
-
-    uint32_t rom_offset_delta = rom_offset_raw + ROM_LAYOUT_DELTA;
-    bool raw_ok   = rom_range_ok(rom_offset_raw, size, rom_size);
-    bool delta_ok = rom_range_ok(rom_offset_delta, size, rom_size);
-
-    uint32_t rom_offset = 0;
-    const char* mode = "bad";
-
-    if (delta_ok && !raw_ok) {
-        rom_offset = rom_offset_delta;
-        mode = "delta";
-    } else if (raw_ok && !delta_ok) {
-        rom_offset = rom_offset_raw;
-        mode = "raw";
-    } else if (delta_ok && raw_ok) {
-        // Most linker-symbol segment starts in this build need the correction.
-        // Keeping the mode explicit lets us spot table-derived offsets that
-        // should later be excluded from this preference.
-        rom_offset = rom_offset_delta;
-        mode = "both_delta";
-    }
-
-    static uint32_t nuPi_log_count = 0;
-    bool title_range = (rom_offset_raw >= 0x00D00000u && rom_offset_raw < 0x00E00000u) ||
-                       (rom_offset_delta >= 0x00D00000u && rom_offset_delta < 0x00E00000u);
-    if (nuPi_log_count < 80 || title_range || (nuPi_log_count < 240 && nuPi_log_count % 10 == 0)) {
-        printf("[nuPiReadRom #%u] mode=%s raw=0x%06X delta=0x%06X chosen=0x%06X buf=%08X size=%u ra=%08X\n",
-               nuPi_log_count, mode, rom_offset_raw, rom_offset_delta, rom_offset,
-               (uint32_t)buf_ptr, size, (uint32_t)ctx->r31);
-        fflush(stdout);
-    }
-    nuPi_log_count++;
-    
-    if (!raw_ok && !delta_ok) {
-        static uint32_t oob_log_count = 0;
-        if (oob_log_count < 20) {
-            printf("[nuPiReadRom BAD #%u] raw=0x%06X delta=0x%06X buf=%08X size=%u rom_size=0x%06X ra=%08X\n",
-                   oob_log_count, rom_offset_raw, rom_offset_delta, (uint32_t)buf_ptr,
-                   size, rom_size, (uint32_t)ctx->r31);
-            fflush(stdout);
+    uint32_t linked_offset = (uint32_t)ctx->r4;
+    uint32_t destination = (uint32_t)ctx->r5;
+    uint32_t size = (uint32_t)ctx->r6;
+    if (size == 0) return;
+    auto rom = recomp::get_rom();
+    for (const auto& segment : hm64::build::rom_segments) {
+        if (linked_offset >= segment.begin && linked_offset < segment.end &&
+            uint64_t(linked_offset) + size <= segment.end) {
+            uint32_t offset = segment.original + linked_offset - segment.begin;
+            if (uint64_t(offset) + size > rom.size() || destination < 0x80000000u ||
+                uint64_t(destination) + size > 0x80800000ull) break;
+            for (uint32_t i = 0; i < size; ++i) {
+                MEM_B(i, (gpr)(int32_t)destination) = rom[offset + i];
+            }
+            return;
         }
-        oob_log_count++;
-        return;
     }
-
-    // Copy ROM → RDRAM; MEM_B handles the big-endian byte-lane swapping.
-    const uint8_t* src = rom_span.data() + rom_offset;
-    for (uint32_t i = 0; i < size; i++) {
-        MEM_B(i, buf_ptr) = src[i];
-    }
-
-    // DIAG: dump first 32 bytes of loaded data for title sprite ROM addresses
-    // (0xDB51F0 area) and for the overlay screen assets (0x154420 area)
-    static uint32_t nuPi_data_dump_count = 0;
-    if (nuPi_data_dump_count < 24 &&
-        ((rom_offset_raw >= 0x154000u && rom_offset_raw <= 0x155000u) ||
-         (rom_offset_raw >= 0xDB5000u && rom_offset_raw <= 0xDD0000u) ||
-         (rom_offset >= 0xDB5000u && rom_offset <= 0xDD0000u))) {
-        nuPi_data_dump_count++;
-        printf("[nuPi-DATA] mode=%s raw=0x%06X chosen=0x%06X buf=0x%08X sz=%u first32:",
-               mode, rom_offset_raw, rom_offset, (uint32_t)buf_ptr, size);
-        uint32_t dump_n = size < 32 ? size : 32;
-        for (uint32_t i = 0; i < dump_n; i++) {
-            printf(" %02X", MEM_B(i, buf_ptr));
-        }
-        printf("\n");
-        // Also dump what ROM source looks like for comparison
-        printf("[nuPi-SRC]  chosen=0x%06X src first32:", rom_offset);
-        for (uint32_t i = 0; i < dump_n; i++) {
-            printf(" %02X", src[i]);
-        }
-        printf("\n");
-        fflush(stdout);
-    }
+    fprintf(stderr, "[rom] Invalid DMA offset=0x%08X destination=0x%08X size=%u\n",
+            linked_offset, destination, size);
 }
+
 
 } // extern "C"

@@ -35,6 +35,7 @@ extern "C" recomp_func_t* get_function(int32_t addr);
 
 #include "audio.h"
 #include "graphics.h"
+#include "hm64_runtime_data.h"
 #include "input.h"
 #include <librecomp/rsp.hpp>
 
@@ -84,80 +85,13 @@ static RspUcodeFunc* hm64_get_rsp_microcode(const OSTask* task) {
     return nullptr;
 }
 
-// ---------------------------------------------------------------------------
-// load_elf_data_section – Load the .code segment's data content from the
-// decomp ELF file into RDRAM.
-//
-// Background:
-//   The 1MB DMA (do_rom_read) loads the original ROM binary into RDRAM.  For
-//   code (functions), this matches the ELF VMA addresses because N64Recomp
-//   generated recompiled functions at the same VMAs.  However, for statically
-//   initialized DATA (global arrays, struct tables, etc.), the content in the
-//   original ROM binary does NOT match what the decomp ELF puts at those
-//   VMAs.  The difference arises because the decomp ELF was built from
-//   partially-reconstructed C sources that don't exactly reproduce the
-//   original compiler output, leaving a layout gap in the data section.
-//
-//   The fix: after the ROM DMA, overwrite the code segment's data region in
-//   RDRAM with the correct bytes from the ELF file.  The ELF's data section
-//   bytes were produced by compiling the decomp sources and represent the
-//   values the recompiled code expects to see at those VMAs.
-//
-// ELF LOAD segment (from readelf -l hm64.elf):
-//   Offset=0x015c00  VirtAddr=0x80025c00  FileSiz=0xf96b0
-//
-// We load only the DATA portion (after the text/ucode) to avoid overwriting
-// the function code that the ROM DMA loaded correctly.  The text portion of
-// the code segment is fine because the recompiled C code is generated at the
-// same VMAs.
-//
-// Data section starts at _codeSegmentDataStart VMA = 0x8010CAD0.
-// We load from there to the end of the ELF LOAD segment content.
-// ---------------------------------------------------------------------------
-static void load_elf_data_section(uint8_t* rdram, const std::string& elf_path) {
-    printf("[init] load_elf_data_section: looking for ELF at path: %s\n", elf_path.c_str());
-    fflush(stdout);
-    
-    // ELF LOAD segment parameters
-    constexpr uint32_t ELF_LOAD_FILE_OFFSET = 0x015c00u;
-    constexpr uint32_t ELF_LOAD_VADDR       = 0x80025c00u;
-    constexpr uint32_t ELF_LOAD_FILESZ      = 0x0f96b0u;
-
-    // We only need to overwrite the data portion (after text/ucode).
-    // _codeSegmentDataStart = 0x8010CAD0 (where ucode text ends and data begins).
-    constexpr uint32_t DATA_VADDR_START = 0x8010CAD0u;
-
-    uint32_t data_offset_in_segment = DATA_VADDR_START - ELF_LOAD_VADDR;
-    uint32_t elf_data_file_offset   = ELF_LOAD_FILE_OFFSET + data_offset_in_segment;
-    uint32_t data_size              = ELF_LOAD_FILESZ - data_offset_in_segment;
-
-    std::ifstream elf_file(elf_path, std::ios::binary);
-    if (!elf_file.good()) {
-        fprintf(stderr, "[init] WARNING: Could not open ELF file '%s' – data section not patched.\n",
-                elf_path.c_str());
-        fprintf(stderr, "[init]   Static data (rdpstateinit_dl, spawnPointToMap, etc.) will be\n");
-        fprintf(stderr, "[init]   wrong and the game will likely crash during map loading.\n");
-        return;
+// Data is bundled from the exact ELF used for code generation.
+static void load_game_data(uint8_t* rdram) {
+    for (uint32_t i = 0; i < hm64::build::data_size; ++i) {
+        MEM_B(i, (gpr)(int32_t)hm64::build::data_address) = hm64::build::data[i];
     }
-
-    elf_file.seekg(elf_data_file_offset);
-    std::vector<uint8_t> data(data_size);
-    elf_file.read(reinterpret_cast<char*>(data.data()), data_size);
-    if (elf_file.fail()) {
-        fprintf(stderr, "[init] WARNING: Failed to read ELF data section.\n");
-        return;
-    }
-
-    // Write into RDRAM using MEM_B for correct byte-lane ordering.
-    // MEM_B(i, vaddr) = rdram[(vaddr + i) ^ 3 - 0x80000000]
-    gpr base_vaddr = (gpr)(int32_t)DATA_VADDR_START;
-    for (uint32_t i = 0; i < data_size; i++) {
-        MEM_B(i, base_vaddr) = (int8_t)data[i];
-    }
-
-    printf("[init] Loaded ELF data section: VMA 0x%08X .. 0x%08X (%u bytes) from '%s'\n",
-           DATA_VADDR_START, DATA_VADDR_START + data_size, data_size, elf_path.c_str());
-    fflush(stdout);
+    printf("[init] Loaded %u bytes of matching game data at 0x%08X\n",
+           hm64::build::data_size, hm64::build::data_address);
 }
 
 // Forward declarations for patched functions that need indirect-call registration
@@ -175,19 +109,19 @@ static void hm64_on_init(uint8_t* rdram, recomp_context* ctx) {
            AU_STATE_VADDR, AU_STATE_VADDR + AU_STATE_SIZE);
 
     // Patch the code segment data section from the decomp ELF.
-    load_elf_data_section(rdram, "hm64.elf");
+    load_game_data(rdram);
 
     // Register patched functions in the overlay map so LOOKUP_FUNC indirect calls
     // (e.g. from mainLoopCallbacksTable) route to our versions, not the recompiled originals.
-    recomp::overlays::add_loaded_function((int32_t)0x800261CCu, setMainLoopCallbackFunctionIndex);
-    recomp::overlays::add_loaded_function((int32_t)0x8005AB6Cu, setMapAudioAndLighting);
-    recomp::overlays::add_loaded_function((int32_t)0x8005ABD4u, setLevelLighting);
-    recomp::overlays::add_loaded_function((int32_t)0x8005B4A4u, levelLoadCallback);
+    recomp::overlays::add_loaded_function((int32_t)hm64::build::sym_setMainLoopCallbackFunctionIndex, setMainLoopCallbackFunctionIndex);
+    recomp::overlays::add_loaded_function((int32_t)hm64::build::sym_setMapAudioAndLighting, setMapAudioAndLighting);
+    recomp::overlays::add_loaded_function((int32_t)hm64::build::sym_setLevelLighting, setLevelLighting);
+    recomp::overlays::add_loaded_function((int32_t)hm64::build::sym_levelLoadCallback, levelLoadCallback);
 
     // Immediately verify func_map has our versions
-    void* got_smaal = (void*)get_function((int32_t)0x8005AB6Cu);
-    void* got_sml   = (void*)get_function((int32_t)0x8005ABD4u);
-    void* got_scmf  = (void*)get_function((int32_t)0x800261CCu);
+    void* got_smaal = (void*)get_function((int32_t)hm64::build::sym_setMapAudioAndLighting);
+    void* got_sml   = (void*)get_function((int32_t)hm64::build::sym_setLevelLighting);
+    void* got_scmf  = (void*)get_function((int32_t)hm64::build::sym_setMainLoopCallbackFunctionIndex);
     printf("[init] registered patched callback-chain functions in overlay map\n");
     printf("[init] func_map[setMapAudioAndLighting] = %p  (patch=%p match=%d)\n",
            got_smaal, (void*)setMapAudioAndLighting, got_smaal == (void*)setMapAudioAndLighting);
@@ -224,7 +158,7 @@ static ultramodern::audio_callbacks_t make_audio_callbacks() {
 
 static ultramodern::input::callbacks_t make_input_callbacks() {
     ultramodern::input::callbacks_t cb{};
-    cb.poll_input = hm64::input::poll;
+    cb.poll_input = nullptr; // Main thread publishes input snapshots.
     cb.get_input = [](int controller_num, uint16_t* buttons, float* x, float* y) -> bool {
         return hm64::input::get_input(controller_num, buttons, x, y);
     };
@@ -390,6 +324,7 @@ int main(int argc, char* argv[]) {
     }
 
     hm64::graphics::init();
+    hm64::input::init();
 
     recomp::Configuration config{};
     config.project_version = {0, 1, 0, ""};
@@ -418,6 +353,7 @@ int main(int argc, char* argv[]) {
     // This call blocks until the window is closed or the game exits.
     recomp::start(config);
 
+    hm64::input::deinit();
     hm64::graphics::deinit();
     SDL_Quit();
 

@@ -209,8 +209,11 @@ void vi_thread_func() {
         }
         total_vis = new_total_vis;
 
-        // If the game hasn't started yet, set a dummy VI mode and origin.
-        if (!ultramodern::is_game_started()) {
+        // If the next state has no VI mode set yet, use a dummy mode and origin.
+        // This covers both the pre-game-start period and the window after the game
+        // is marked started but before its boot code has run osViSetMode, avoiding a
+        // null dereference in update_vi().
+        if (events_context.vi.get_next_state()->mode == nullptr) {
             static bool odd = false;
             set_dummy_vi(odd);
             odd = !odd;

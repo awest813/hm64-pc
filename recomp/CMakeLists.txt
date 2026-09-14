@@ -81,6 +81,11 @@ add_executable(hm64_pc
     ${RECOMP_FUNCS}
 )
 
+# CI can configure and compile libraries without a ROM or generated game data.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/output/hm64_runtime_data.cpp")
+    target_sources(hm64_pc PRIVATE output/hm64_runtime_data.cpp)
+endif()
+
 # platform/ headers (graphics.h, audio.h, input.h) are included relative to
 # this directory; add platform/ so that #include "audio.h" etc. resolve.
 target_include_directories(hm64_pc PRIVATE
@@ -102,6 +107,7 @@ target_include_directories(hm64_pc PRIVATE
     lib/RT64/src/contrib/nativefiledialog-extended/src/include
     lib/RT64/src/contrib/mupen64plus-core/src/api
     output/funcs
+    output
 )
 
 # Link against ultramodern, librecomp, RT64, and SDL2.

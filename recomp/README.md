@@ -124,3 +124,24 @@ the original N64 hardware assumptions.
 
 Keep patches focused and well-commented so faithfulness and maintainability are
 easy to review.
+
+## Startup investigation (September 2026)
+
+Code generation now bundles ELF data into the executable and derives asset ROM
+mappings from the same ELF and the US splat configuration. Run
+`make recomp-generate` before `make recomp-build` after changing the ELF; generated
+functions, symbol addresses, and data must be kept together. The executable no
+longer opens `hm64.elf` at runtime.
+
+The native path now submits initialization, scene, and final-sync display lists
+using the generated camera and graphics routines. VI setup uses the correct mode
+stride and scanline origin, and the retrace stack no longer overlaps game BSS.
+SDL input is sampled on the main thread and exposed through NuSystem controller
+status and extended reads. The forced title transition clears intro executors
+and sprites before initializing the title.
+
+The September 14 WSL build passes and startup reaches the title callback, but
+the native window remains black. The software title blit is disabled while this
+path is under investigation. Start was exercised in the window, but visible menu
+or gameplay progression has not been verified. This is still a work-in-progress
+port, not a playable release.

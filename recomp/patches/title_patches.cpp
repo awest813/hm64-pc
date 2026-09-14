@@ -18,6 +18,7 @@
  */
 
 #include "recomp.h"
+#include "hm64_runtime_data.h"
 #include "librecomp/game.hpp"
 #include "librecomp/addresses.hpp"
 #include "ultramodern/ultramodern.hpp"
@@ -27,6 +28,8 @@
 #include <cstdint>
 #include <execinfo.h>
 #include <unistd.h>
+#include <chrono>
+#include <thread>
 
 extern "C" {
     void initializeEngine(uint8_t* rdram, recomp_context* ctx);
@@ -47,6 +50,7 @@ extern "C" {
     void setMapRGBA(uint8_t* rdram, recomp_context* ctx);
     void startGfxTask(uint8_t* rdram, recomp_context* ctx);
     void renderScene(uint8_t* rdram, recomp_context* ctx);
+    void setupCameraMatrices(uint8_t*, recomp_context*);
     void doViewportGfxTask(uint8_t* rdram, recomp_context* ctx);
     void renderSceneGraph(uint8_t* rdram, recomp_context* ctx);
     void guMtxIdent(uint8_t* rdram, recomp_context* ctx);
@@ -482,7 +486,7 @@ extern "C" RECOMP_PATCH void setSpriteRotation(uint8_t* rdram, recomp_context* c
 //   r6 = ry bits
 //   r7 = rz bits
 // ---------------------------------------------------------------------------
-extern "C" RECOMP_PATCH void guRotateRPY(uint8_t* rdram, recomp_context* ctx) {
+extern "C" RECOMP_PATCH void legacy_guRotateRPY(uint8_t* rdram, recomp_context* ctx) {
     // Reinterpret register integer bits as floats.
     float rx, ry, rz;
     uint32_t rx_bits = (uint32_t)ctx->r5;
@@ -557,10 +561,10 @@ extern "C" RECOMP_PATCH void mainproc(uint8_t* rdram, recomp_context* ctx) {
     rdram_wu8(rdram, GFX_TASK_NO_VADDR,   0xFF);
 
     // Set VI mode to NTSC Low Pass (OS_VI_NTSC_LAN1 = 2)
-    // OSViMode structure is 0x108 bytes (from libultra source)
+    // OSViMode is 80 bytes: type/padding, common registers and two fields.
     // osViModeTable at VMA 0x8011D050 (symbol_addrs.txt)
     extern void osViSetMode_recomp(uint8_t*, recomp_context*);
-    ctx->r4 = (gpr)(int32_t)(0x8011D050u + 2 * 0x108u);  // &osViModeTable[OS_VI_NTSC_LAN1]
+    ctx->r4 = (gpr)(int32_t)(hm64::build::sym_osViModeTable + 2 * 80u);  // &osViModeTable[OS_VI_NTSC_LAN1]
     osViSetMode_recomp(rdram, ctx);
 
     printf("[mainproc] starting initializeEngine...\n"); fflush(stdout);
@@ -604,19 +608,10 @@ extern "C" RECOMP_PATCH void mainproc(uint8_t* rdram, recomp_context* ctx) {
         while (true) {
             // Spin while stepMainLoop == 0 — use atomic load to see VI callback writes
             uint8_t step_val = __atomic_load_n(step_ptr, __ATOMIC_ACQUIRE);
-            uint32_t spin_count = 0;
             while (step_val == 0) {
-                step_val = __atomic_load_n(step_ptr, __ATOMIC_ACQUIRE);  // Re-read each iteration
-                spin_count++;
-                if (spin_count > 10000000u) {
-                    printf("[mainLoop-manual #%u] spin timeout! stepML=%u re-read=%u\n", iter, step_val, step_val);
-                    fflush(stdout);
-                    spin_count = 0;
-                }
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                step_val = __atomic_load_n(step_ptr, __ATOMIC_ACQUIRE);
             }
-
-            printf("[mainLoop-manual #%u] stepML=%u exiting spin\n", iter, step_val);
-            fflush(stdout);
 
             // Check D_8020564C skip counter
             uint16_t skip = *(uint16_t*)(rdram + ((D_8020564C ^ 2u) - 0x80000000u));
@@ -831,6 +826,12 @@ extern "C" RECOMP_PATCH void mainproc(uint8_t* rdram, recomp_context* ctx) {
                     printf("[fix] Forcing title screen after opening transition stall: seg=%u csidx=%u iter=%u\n",
                            seg, csidx, iter);
                     fflush(stdout);
+                    extern void deactivateCutsceneExecutors(uint8_t*, recomp_context*);
+                    extern void deactivateSprites(uint8_t*, recomp_context*);
+                    extern void deactivateGlobalSprites(uint8_t*, recomp_context*);
+                    deactivateCutsceneExecutors(rdram, ctx);
+                    deactivateSprites(rdram, ctx);
+                    deactivateGlobalSprites(rdram, ctx);
                     *(int32_t*)(rdram + (0x801891D4u - 0x80000000u)) = 0x8001;
                     ctx->r4 = 0;
                     initializeTitleScreen(rdram, ctx);
@@ -871,7 +872,7 @@ extern "C" RECOMP_PATCH void loadMapAtSpawnPoint(uint8_t* rdram, recomp_context*
 
     // --- resolve spawn → map ID (spawnPointToMap[spawnPoint]) ---
     // spawnPointToMap at VMA 0x8010FBE0 (loaded from ELF data section).
-    uint8_t mapId = rdram_ru8(rdram, 0x8010FBE0u + spawnPoint);
+    uint8_t mapId = rdram_ru8(rdram, hm64::build::sym_spawnPointToMap + spawnPoint);
 
     // Clear no-world flag for every load; set it explicitly for dummy maps.
     s_no_world_geometry = false;
@@ -879,27 +880,8 @@ extern "C" RECOMP_PATCH void loadMapAtSpawnPoint(uint8_t* rdram, recomp_context*
     printf("[loadMapAtSpawnPoint] spawn=0x%02X mapId=%u\n", spawnPoint, mapId);
     fflush(stdout);
 
-    // --- Dummy map detection ---
-    // Guard spawn 0x61 (OPENING_LOGOS) and map 53, AND any spawn/map combo
-    // whose dmaMapAssets ROM address is 0 or obviously garbage (high bit set
-    // in the size field), which would crash on DMA.  For safety, skip any map
-    // whose rom asset header at mapRomAddressTable[mapId] is 0 / corrupted.
-    // mapRomAddressTable is at 0x80110270 in the ELF data section (u32 pairs:
-    // romStart, romEnd per map; stride 8 bytes).
-    constexpr uint32_t MAP_ROM_TBL = 0x80110270u;
-    uint32_t map_rom_start = (uint32_t)MEM_W(0, (gpr)(int32_t)(MAP_ROM_TBL + mapId * 8u));
-    uint32_t map_rom_end   = (uint32_t)MEM_W(4, (gpr)(int32_t)(MAP_ROM_TBL + mapId * 8u));
-    bool bad_rom = (map_rom_start == 0) || (map_rom_end < map_rom_start) ||
-                   (map_rom_end - map_rom_start > 0x1000000u);
-
-    bool is_dummy = (spawnPoint == OPENING_LOGOS_SPAWN_POINT) ||
-                    (mapId == OPENING_LOGOS_MAP_ID) || bad_rom;
-
-    if (bad_rom && !is_dummy) {
-        printf("[loadMapAtSpawnPoint] bad ROM for spawn=0x%02X map=%u romStart=%08X romEnd=%08X – skipping\n",
-               spawnPoint, mapId, map_rom_start, map_rom_end);
-        fflush(stdout);
-    }
+    const bool is_dummy = spawnPoint == OPENING_LOGOS_SPAWN_POINT ||
+                          mapId == OPENING_LOGOS_MAP_ID;
 
     if (is_dummy) {
         printf("[loadMapAtSpawnPoint] dummy/cinematic map – skipping world load\n");
@@ -1120,7 +1102,7 @@ extern "C" RECOMP_PATCH void loadLevelMapObjects(uint8_t* rdram, recomp_context*
 //
 // Return value: r2 = dl + 8 (the next display list pointer, 1 command written).
 // ---------------------------------------------------------------------------
-extern "C" RECOMP_PATCH void initRcp(uint8_t* rdram, recomp_context* ctx) {
+extern "C" RECOMP_PATCH void legacy_initRcp(uint8_t* rdram, recomp_context* ctx) {
     gpr dl = ctx->r4;  // Gfx* dl (N64 vaddr of display list buffer)
 
     // gSPSegment(dl, 0, 0)  – opcode 0xDB, seg=0, addr=0
@@ -1145,11 +1127,11 @@ extern "C" RECOMP_PATCH void initRcp(uint8_t* rdram, recomp_context* ctx) {
 //   w0 = 0xF6000000 | (319*4<<12) | (239*4) = 0xF6 4FC3 BC00
 //   Actually the game uses: F6 4F C3 BC 00 00 00 00 (from earlier DL dump)
 // ---------------------------------------------------------------------------
-extern "C" RECOMP_PATCH void clearFramebuffer(uint8_t* rdram, recomp_context* ctx) {
+extern "C" RECOMP_PATCH void legacy_clearFramebuffer(uint8_t* rdram, recomp_context* ctx) {
     gpr dl = ctx->r4;
 
     // Read current framebuffer pointer from nuGfxCfb_ptr (VMA 0x80118068).
-    uint32_t cfb_vaddr = (uint32_t)MEM_W(0x18068, (gpr)(int32_t)0x80100000u);
+    uint32_t cfb_vaddr = (uint32_t)MEM_W(0, (gpr)(int32_t)hm64::build::sym_nuGfxCfb_ptr);
     if (cfb_vaddr == 0u) cfb_vaddr = 0x8038F800u;
     uint32_t cfb_phys = cfb_vaddr & 0x1FFFFFFFu;
     constexpr uint32_t ZBF_PHYS = 0x00000400u;  // nuGfxZBuffer phys
@@ -1210,7 +1192,7 @@ extern "C" RECOMP_PATCH void clearFramebuffer(uint8_t* rdram, recomp_context* ct
 // Safe default: eye=(0,0,100), at=(0,0,0), up=(0,1,0), ortho mode.
 // (Ortho is safe because fov/aspect/near/far may also be zero.)
 // ---------------------------------------------------------------------------
-extern "C" RECOMP_PATCH void setupCameraMatrices(uint8_t* rdram, recomp_context* ctx) {
+extern "C" RECOMP_PATCH void legacy_setupCameraMatrices(uint8_t* rdram, recomp_context* ctx) {
     // s0 = camera ptr (r5 at entry, saved before call by recompiled code)
     // r4 = dl ptr, r5 = camera ptr, r6 = sceneMatrices ptr
     gpr camera_vaddr = ctx->r5;
@@ -1447,7 +1429,7 @@ static const char* dl_cmd_name(uint32_t w0) {
 // gGraphicsBufferIndex at MEM_W(0x5630, 0x80200000).
 // ---------------------------------------------------------------------------
 static uint32_t rs_count = 0;
-extern "C" RECOMP_PATCH void renderScene(uint8_t* rdram, recomp_context* ctx) {
+extern "C" RECOMP_PATCH void legacy_renderScene(uint8_t* rdram, recomp_context* ctx) {
     uint32_t buf_idx = (uint32_t)MEM_W(0x5630, (gpr)(int32_t)0x80200000u);
 
     constexpr uint32_t SCENE_GFX_BASE   = 0x801836A0u;
@@ -1456,7 +1438,7 @@ extern "C" RECOMP_PATCH void renderScene(uint8_t* rdram, recomp_context* ctx) {
     gpr dl_start = dl;
 
     // gSPDisplayList(viewportDL) — corrected physical address
-    constexpr uint32_t VIEWPORT_DL_PHYS = 0x0010DE30u;
+    constexpr uint32_t VIEWPORT_DL_PHYS = (hm64::build::sym_viewportDL & 0x1FFFFFFFu);
     MEM_W(0x0, dl) = (int32_t)0xDE000000u;
     MEM_W(0x4, dl) = (int32_t)VIEWPORT_DL_PHYS;
     dl = ADD32(dl, 0x8);
@@ -1501,6 +1483,7 @@ extern "C" RECOMP_PATCH void renderScene(uint8_t* rdram, recomp_context* ctx) {
     
     // Log display list contents after renderSceneGraph
     uint32_t dl_size_bytes = (uint32_t)((uint32_t)dl - (uint32_t)(dl_start));
+    // Keep the existing title fallback until native RT64 frame presentation is fixed.
     if (s_title_forced && dl_size_bytes >= 512) {
         software_blit_title_from_scene(rdram, (uint32_t)dl_start, dl_size_bytes);
     }
@@ -1567,7 +1550,7 @@ extern "C" RECOMP_PATCH void renderScene(uint8_t* rdram, recomp_context* ctx) {
 // The original bakes 0x0010DE80 for viewportDL (ROM); ELF has it at 0x0010DE30.
 // D_80205000[buf_idx]: base 0x80205000, stride 256 bytes per buffer.
 // ---------------------------------------------------------------------------
-extern "C" RECOMP_PATCH void doViewportGfxTask(uint8_t* rdram, recomp_context* ctx) {
+extern "C" RECOMP_PATCH void legacy_doViewportGfxTask(uint8_t* rdram, recomp_context* ctx) {
     uint32_t buf_idx = (uint32_t)MEM_W(0x5630, (gpr)(int32_t)0x80200000u);
     constexpr uint32_t VIEWPORT_TASK_BASE = 0x80205000u;
     gpr dl       = (gpr)(int32_t)(VIEWPORT_TASK_BASE + (buf_idx << 8));
@@ -1575,7 +1558,7 @@ extern "C" RECOMP_PATCH void doViewportGfxTask(uint8_t* rdram, recomp_context* c
 
     // gSPDisplayList(viewportDL) — corrected physical
     MEM_W(0x0, dl) = (int32_t)0xDE000000u;
-    MEM_W(0x4, dl) = (int32_t)0x0010DE30u;
+    MEM_W(0x4, dl) = (int32_t)(hm64::build::sym_viewportDL & 0x1FFFFFFFu);
     dl = ADD32(dl, 0x8);
     // gDPFullSync
     MEM_W(0x0, dl) = (int32_t)0xE9000000u; MEM_W(0x4, dl) = 0;
@@ -1738,40 +1721,6 @@ extern "C" RECOMP_PATCH void levelLoadCallback(uint8_t* rdram, recomp_context* c
 // ---------------------------------------------------------------------------
 // initializeCutscene – log entry so we know if it's called and with what seg.
 // ---------------------------------------------------------------------------
-extern "C" RECOMP_PATCH void initializeCutscene(uint8_t* rdram, recomp_context* ctx) {
-    uint16_t seg = (uint16_t)(ctx->r4 & 0xFFFF);
-
-    // Read cutsceneBytecodeAddresses[seg]: base 0x8010FF10, stride 8 (2 u32s)
-    constexpr uint32_t BA_BASE = 0x8010FF10u;
-    uint32_t rom_start = *(uint32_t*)(rdram + (BA_BASE + seg*8u     - 0x80000000u));
-    uint32_t rom_end   = *(uint32_t*)(rdram + (BA_BASE + seg*8u + 4 - 0x80000000u));
-
-    // cutsceneBankLoadAddresses[seg]: base 0x80110150, stride 4
-    constexpr uint32_t LA_BASE = 0x80110150u;
-    uint32_t load_addr = *(uint32_t*)(rdram + (LA_BASE + seg*4u - 0x80000000u));
-
-    // gCutsceneCompletionFlags before zero: 0x801891D4
-    int32_t compl_before = *(int32_t*)(rdram + (0x801891D4u - 0x80000000u));
-
-    printf("[initializeCutscene] seg=%u romStart=%08X romEnd=%08X load=%08X compl_before=%08X\n",
-           seg, rom_start, rom_end, load_addr, (uint32_t)compl_before);
-    fflush(stdout);
-
-    // Call the original recompiled body.
-    extern void initializeCutscene_recomp(uint8_t*, recomp_context*);
-    // We replaced initializeCutscene with this patch, so call the original by
-    // invoking its recomp address via LOOKUP_FUNC.
-    constexpr uint32_t INIT_CS_VADDR = 0x80099a20u;
-    LOOKUP_FUNC(INIT_CS_VADDR)(rdram, ctx);
-
-    // Log result
-    int32_t compl_after  = (int32_t)MEM_W(0x1891D4, (gpr)(int32_t)0x80000000u);
-    uint32_t csflags_after = (uint32_t)MEM_W(0x16FE00, (gpr)(int32_t)0x80000000u);
-    printf("[initializeCutscene] done: compl_after=%08X csflags=%08X\n",
-           (uint32_t)compl_after, csflags_after);
-    fflush(stdout);
-}
-
 // ---------------------------------------------------------------------------
 // Cutscene executor probe — patches updateCutsceneExecutors to log each active
 // executor's bytecodePtr, opcode, waitFrames, and detect stuck PCs.

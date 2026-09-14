@@ -10,6 +10,8 @@
 #include <cstdint>
 #include <cstring>
 #include <cstdio>
+#include <mutex>
+#include <atomic>
 
 #define N64_A_BUTTON       0x8000
 #define N64_B_BUTTON       0x4000
@@ -31,7 +33,8 @@ namespace hm64::input {
 static uint16_t s_buttons = 0;
 static float s_stick_x = 0;
 static float s_stick_y = 0;
-static bool s_quit = false;
+static std::atomic<bool> s_quit{false};
+static std::mutex s_state_mutex;
 
 static SDL_GameController* s_gamepad = nullptr;
 
@@ -139,12 +142,14 @@ void poll() {
         else if (ly < -GAMEPAD_DEAD_ZONE) sy = -(float)ly / 32768.0f;
     }
 
+    std::lock_guard lock(s_state_mutex);
     s_buttons = buttons;
     s_stick_x = sx;
     s_stick_y = sy;
 }
 
 bool get_input(int controller_num, uint16_t* buttons, float* x, float* y) {
+    std::lock_guard lock(s_state_mutex);
     if (controller_num == 0) {
         *buttons = s_buttons;
         *x = s_stick_x;
