@@ -22,6 +22,8 @@
 #define HLSL_CPU
 #endif
 #include "hle/rt64_application.h"
+#include "gbi/rt64_gbi_f3dex2.h"
+#include "gbi/rt64_gbi_rdp.h"
 
 #include <SDL2/SDL.h>
 #include <cstdio>
@@ -29,6 +31,8 @@
 #include <cstring>
 #include <memory>
 #include <atomic>
+#include <mutex>
+#include <condition_variable>
 
 static constexpr int SCREEN_W   = 320;
 static constexpr int SCREEN_H   = 240;
@@ -41,6 +45,16 @@ namespace hm64::graphics {
 
 static SDL_Window* s_window  = nullptr;
 static bool s_fullscreen     = false;
+static std::mutex s_task_mutex;
+static std::condition_variable s_task_done;
+static uint64_t s_tasks_completed = 0;
+
+void submit_task_and_wait(uint8_t* rdram, uint32_t task_address) {
+    std::unique_lock lock(s_task_mutex);
+    const uint64_t target = s_tasks_completed + 1;
+    ultramodern::submit_rsp_task(rdram, task_address);
+    s_task_done.wait(lock, [target] { return s_tasks_completed >= target; });
+}
 
 /* -------------------------------------------------------------------------
  * RT64-backed RendererContext
@@ -51,6 +65,7 @@ public:
     RT64::Application* app    = nullptr;
     uint8_t*           rdram  = nullptr;
     SDL_Window*        window = nullptr;
+    RT64::GBI game_gbi;
 
     // VI register storage – filled from ultramodern::renderer::get_vi_regs()
     // each update_screen() call so RT64::Application::Core can read them.
@@ -155,17 +170,27 @@ public:
             fflush(stdout);
         }
 
-        // Ensure RT64's HLE GBI is initialized before processing the display list.
-        // Use HM64's actual gspF3DEX2_fifo symbols from hm64.map.
+        // The port builds display lists with F3DEX_GBI_2. Its linked microcode
+        // placeholder cannot be identified by hashing the original ROM bytes.
         if (app->interpreter) {
-            constexpr uint32_t F3DEX2_TEXT_PHYS = (hm64::build::sym_gspF3DEX2_fifoTextStart & 0x1FFFFFFFu);
-            constexpr uint32_t F3DEX2_DATA_PHYS = (hm64::build::sym_gspF3DEX2_fifoDataStart & 0x1FFFFFFFu);
-            app->interpreter->loadUCodeGBI(F3DEX2_TEXT_PHYS, F3DEX2_DATA_PHYS, /*resetFromTask=*/true);
+            if (game_gbi.ucode == RT64::GBIUCode::Unknown) {
+                game_gbi.ucode = RT64::GBIUCode::F3DEX2;
+                RT64::GBI_RDP::setup(&game_gbi, true);
+                RT64::GBI_F3DEX2::setup(&game_gbi);
+            }
+            app->interpreter->hleGBI = &game_gbi;
+            app->interpreter->state->rsp->setGBI(&game_gbi);
+            game_gbi.resetFromTask(app->interpreter->state);
         }
 
         // Each frame includes initialization, scene and final-sync tasks.
         uint32_t dl_start = static_cast<uint32_t>(task->t.data_ptr) & 0x1FFFFFFFu;
         app->processDisplayLists(rdram, dl_start, 0, /*isHLE=*/true);
+        {
+            std::lock_guard lock(s_task_mutex);
+            ++s_tasks_completed;
+        }
+        s_task_done.notify_all();
     }
 
     void update_screen() override {

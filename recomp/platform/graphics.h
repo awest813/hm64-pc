@@ -20,6 +20,8 @@ WindowHandle get_window_handle();
 bool run_rsp_task(uint8_t* rdram, const OSTask* task);
 void on_vi_interrupt();
 void update_gfx();
+// Keep display lists and their referenced game memory alive until HLE parses them.
+void submit_task_and_wait(uint8_t* rdram, uint32_t task_address);
 WindowHandle create_window();
 
 }

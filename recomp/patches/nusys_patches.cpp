@@ -10,6 +10,7 @@
 
 #include "recomp.h"
 #include "input.h"
+#include "graphics.h"
 #include <algorithm>
 #include "hm64_runtime_data.h"
 #include "librecomp/game.hpp"
@@ -136,7 +137,10 @@ RECOMP_PATCH void gfxRetraceCallback(uint8_t* rdram, recomp_context* ctx) {
     *(uint16_t*)(rdram + ((ENGINE_FLAGS_ADDR ^ 2u) - 0x80000000u)) = engFlags;
 
     extern void readControllerData(uint8_t*, recomp_context*);
-    readControllerData(rdram, ctx);
+    // Keep pressed/released edges intact until the main loop consumes them.
+    if (__atomic_load_n(rdram + ((STEP_MAIN_LOOP_ADDR ^ 3u) - 0x80000000u),
+                        __ATOMIC_ACQUIRE) == 0)
+        readControllerData(rdram, ctx);
 
     // handleGraphicsUpdate(pendingGfx) - this is where stepMainLoop gets set to 1
     extern void handleGraphicsUpdate(uint8_t* rdram, recomp_context* ctx);
@@ -298,9 +302,9 @@ RECOMP_PATCH void nuGfxTaskStart(uint8_t* rdram, recomp_context* ctx) {
     task->t.flags           = 0;
     task->t.data_ptr        = (PTR(u64))gfxp;
     task->t.data_size       = gfxsize;
-    task->t.ucode           = (PTR(u64))0x800EFA80u;
+    task->t.ucode           = (PTR(u64))hm64::build::sym_gspF3DEX2_fifoTextStart;
     task->t.ucode_size      = 0x0160u;
-    task->t.ucode_data      = (PTR(u64))0x800FC7C0u;
+    task->t.ucode_data      = (PTR(u64))hm64::build::sym_gspF3DEX2_fifoDataStart;
     task->t.ucode_data_size = 0x0420u;
     task->t.dram_stack      = (PTR(u64))0x8011D000u;
     task->t.dram_stack_size = 0x40u;
@@ -309,7 +313,7 @@ RECOMP_PATCH void nuGfxTaskStart(uint8_t* rdram, recomp_context* ctx) {
     task->t.ucode_boot      = (PTR(u64))0x80110820u;
     task->t.ucode_boot_size = 0x100u;
 
-    ultramodern::submit_rsp_task(rdram, task_vaddr);
+    hm64::graphics::submit_task_and_wait(rdram, task_vaddr);
 
     // If the caller requested a buffer swap, advance the framebuffer and
     // call osViSwapBuffer so RT64 knows which RDRAM buffer to scan out.
@@ -553,6 +557,17 @@ RECOMP_PATCH void nuPiReadRom(uint8_t* rdram, recomp_context* ctx) {
     uint32_t size = (uint32_t)ctx->r6;
     if (size == 0) return;
     auto rom = recomp::get_rom();
+    // Bytecode embeds offsets into the original ROM, unlike linked C symbols.
+    // Carry that address space through sprite streaming with the PI ROM tag.
+    if ((linked_offset & 0xFF000000u) == 0x10000000u) {
+        uint32_t offset = linked_offset & 0x00FFFFFFu;
+        if (uint64_t(offset) + size <= rom.size() && destination >= 0x80000000u &&
+            uint64_t(destination) + size <= 0x80800000ull) {
+            for (uint32_t i = 0; i < size; ++i)
+                MEM_B(i, (gpr)(int32_t)destination) = rom[offset + i];
+            return;
+        }
+    }
     for (const auto& segment : hm64::build::rom_segments) {
         if (linked_offset >= segment.begin && linked_offset < segment.end &&
             uint64_t(linked_offset) + size <= segment.end) {
@@ -569,5 +584,45 @@ RECOMP_PATCH void nuPiReadRom(uint8_t* rdram, recomp_context* ctx) {
             linked_offset, destination, size);
 }
 
+RECOMP_PATCH void cutsceneHandlerDMASprite(uint8_t* rdram, recomp_context* ctx) {
+    const gpr executor = (gpr)(int32_t)(hm64::build::sym_cutsceneExecutors +
+                                      uint16_t(ctx->r4) * 0x70u);
+    const gpr command = (gpr)(int32_t)MEM_W(0, executor);
+    const uint16_t sprite = MEM_HU(2, command);
+    const uint16_t asset_type = MEM_HU(4, command);
+    uint32_t args[15] = {sprite};
+    for (unsigned i = 0; i < 12; ++i) {
+        args[i + 1] = MEM_W(8 + i * 4, command);
+        if (i < 6 && args[i + 1]) args[i + 1] |= 0x10000000u;
+    }
+    args[13] = asset_type;
+    MEM_H(0x64, executor) = sprite;
+    MEM_W(0, executor) = ADD32(command, 56);
+
+    // Supply the o32 stack arguments without overwriting the caller's frame.
+    const gpr saved_sp = ctx->r29;
+    ctx->r29 = ADD32(saved_sp, -64);
+    ctx->r4 = args[0]; ctx->r5 = args[1]; ctx->r6 = args[2]; ctx->r7 = args[3];
+    for (unsigned i = 4; i < 15; ++i) MEM_W(i * 4, ctx->r29) = args[i];
+    extern void dmaSprite(uint8_t*, recomp_context*);
+    dmaSprite(rdram, ctx);
+    ctx->r29 = saved_sp;
+    ctx->r4 = sprite;
+    ctx->r5 = 1;
+    extern void setBilinearFiltering(uint8_t*, recomp_context*);
+    setBilinearFiltering(rdram, ctx);
+}
+
+RECOMP_PATCH void cutsceneHandlerDoDMA(uint8_t* rdram, recomp_context* ctx) {
+    const gpr executor = (gpr)(int32_t)(hm64::build::sym_cutsceneExecutors +
+                                      uint16_t(ctx->r4) * 0x70u);
+    const gpr command = (gpr)(int32_t)MEM_W(0, executor);
+    uint32_t begin = MEM_W(4, command), end = MEM_W(8, command);
+    ctx->r4 = begin | 0x10000000u;
+    ctx->r5 = (gpr)(int32_t)MEM_W(12, command);
+    ctx->r6 = end - begin;
+    MEM_W(0, executor) = ADD32(command, 16);
+    nuPiReadRom(rdram, ctx);
+}
 
 } // extern "C"

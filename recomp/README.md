@@ -137,11 +137,17 @@ The native path now submits initialization, scene, and final-sync display lists
 using the generated camera and graphics routines. VI setup uses the correct mode
 stride and scanline origin, and the retrace stack no longer overlaps game BSS.
 SDL input is sampled on the main thread and exposed through NuSystem controller
-status and extended reads. The forced title transition clears intro executors
-and sprites before initializing the title.
+status and extended reads. Controller edges are retained while the game processes
+the previous tick. The original map, sprite transform, and fade routines now run
+without forcing a jump to the title.
 
-The September 14 WSL build passes and startup reaches the title callback, but
-the native window remains black. The software title blit is disabled while this
-path is under investigation. Start was exercised in the window, but visible menu
-or gameplay progression has not been verified. This is still a work-in-progress
-port, not a playable release.
+Cutscene DMA distinguishes original ROM offsets embedded in scripts from relocated
+ELF asset addresses. Native rendering explicitly selects F3DEX2 and waits for each
+display list to be parsed before its memory is reused.
+
+The September 17 WSL build passes. Native dialogue boxes and character portraits
+have been observed, resolving the completely black output. Full opening scenery
+and the title-to-main-menu transition remain unverified; the opening can stall
+waiting for an entity animation. Shutdown also needs work: a timed run exposed a
+game-thread access after RDRAM teardown. This is still a work-in-progress port,
+not a playable release.

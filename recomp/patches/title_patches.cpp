@@ -423,7 +423,7 @@ static inline void read_sprite_vec3_any(uint8_t* rdram, uint32_t index, uint32_t
     z = rdram_rf32_any(rdram, sv + 0x8u);
 }
 
-extern "C" RECOMP_PATCH void setSpriteViewSpacePosition(uint8_t* rdram, recomp_context* ctx) {
+extern "C" RECOMP_PATCH void legacy_setSpriteViewSpacePosition(uint8_t* rdram, recomp_context* ctx) {
     uint32_t index = (uint32_t)ctx->r4 & 0xFFFFu;
     ctx->r2 = 0;
     if (!global_sprite_active(rdram, index)) return;
@@ -433,7 +433,7 @@ extern "C" RECOMP_PATCH void setSpriteViewSpacePosition(uint8_t* rdram, recomp_c
     ctx->r2 = 1;
 }
 
-extern "C" RECOMP_PATCH void adjustSpriteViewSpacePosition(uint8_t* rdram, recomp_context* ctx) {
+extern "C" RECOMP_PATCH void legacy_adjustSpriteViewSpacePosition(uint8_t* rdram, recomp_context* ctx) {
     uint32_t index = (uint32_t)ctx->r4 & 0xFFFFu;
     ctx->r2 = 0;
     if (!global_sprite_active(rdram, index)) return;
@@ -447,7 +447,7 @@ extern "C" RECOMP_PATCH void adjustSpriteViewSpacePosition(uint8_t* rdram, recom
     ctx->r2 = 1;
 }
 
-extern "C" RECOMP_PATCH void setSpriteScale(uint8_t* rdram, recomp_context* ctx) {
+extern "C" RECOMP_PATCH void legacy_setSpriteScale(uint8_t* rdram, recomp_context* ctx) {
     uint32_t index = (uint32_t)ctx->r4 & 0xFFFFu;
     ctx->r2 = 0;
     if (!global_sprite_active(rdram, index)) return;
@@ -457,7 +457,7 @@ extern "C" RECOMP_PATCH void setSpriteScale(uint8_t* rdram, recomp_context* ctx)
     ctx->r2 = 1;
 }
 
-extern "C" RECOMP_PATCH void setSpriteRotation(uint8_t* rdram, recomp_context* ctx) {
+extern "C" RECOMP_PATCH void legacy_setSpriteRotation(uint8_t* rdram, recomp_context* ctx) {
     uint32_t index = (uint32_t)ctx->r4 & 0xFFFFu;
     ctx->r2 = 0;
     if (!global_sprite_active(rdram, index)) return;
@@ -726,11 +726,11 @@ extern "C" RECOMP_PATCH void mainproc(uint8_t* rdram, recomp_context* ctx) {
                 RUN(updateEntities);
                 RUN(updateMapController);
                 RUN(updateMapGraphics);
-                RUN(updateNumberSprites);
-                RUN(updateSprites);
-                RUN(dmaSprites);
-                RUN(updateBitmaps);
             }
+            RUN(updateNumberSprites);
+            RUN(updateSprites);
+            RUN(dmaSprites);
+            RUN(updateBitmaps);
             RUN(updateMessageBox);
             RUN(updateDialogues);
 
@@ -814,34 +814,8 @@ extern "C" RECOMP_PATCH void mainproc(uint8_t* rdram, recomp_context* ctx) {
                 fflush(stdout);
             }
 
-            // --- PC PORT HACK ---
-            // Deterministic check: fire at exactly iter=120 (not gated by % 60).
-            // Previously nested inside iter % 60 == 0, so earliest fire was 180.
-            {
-                uint16_t seg = *(uint16_t*)(rdram + ((0x8018981Cu ^ 2u) - 0x80000000u));
-                uint16_t csidx = *(uint16_t*)(rdram + ((0x801C3B66u ^ 2u) - 0x80000000u));
-                bool opening_stuck = (seg == 30 && iter >= 10) ||
-                                     (csidx >= 1450 && csidx <= 1499 && iter >= 10);
-                if (opening_stuck && !s_title_forced) {
-                    printf("[fix] Forcing title screen after opening transition stall: seg=%u csidx=%u iter=%u\n",
-                           seg, csidx, iter);
-                    fflush(stdout);
-                    extern void deactivateCutsceneExecutors(uint8_t*, recomp_context*);
-                    extern void deactivateSprites(uint8_t*, recomp_context*);
-                    extern void deactivateGlobalSprites(uint8_t*, recomp_context*);
-                    deactivateCutsceneExecutors(rdram, ctx);
-                    deactivateSprites(rdram, ctx);
-                    deactivateGlobalSprites(rdram, ctx);
-                    *(int32_t*)(rdram + (0x801891D4u - 0x80000000u)) = 0x8001;
-                    ctx->r4 = 0;
-                    initializeTitleScreen(rdram, ctx);
-                    s_no_world_geometry = false;
-                    s_title_forced = true;
-                }
-            }
-            // --------------------
-
-            // Reset stepMainLoop = 0
+            // Preserve natural cutscene progression; do not force the title.
+            // Reset stepMainLoop = 0.
             rdram[(STEP_ML ^ 3u) - 0x80000000u] = 0;
             iter++;
         }
@@ -864,7 +838,7 @@ extern "C" RECOMP_PATCH void mainproc(uint8_t* rdram, recomp_context* ctx) {
 //   - MAP_CONTROLLER_ASSETS_LOADED flag at 0x80205622
 //   - s_no_world_geometry = true
 // ---------------------------------------------------------------------------
-extern "C" RECOMP_PATCH void loadMapAtSpawnPoint(uint8_t* rdram, recomp_context* ctx) {
+extern "C" RECOMP_PATCH void legacy_loadMapAtSpawnPoint(uint8_t* rdram, recomp_context* ctx) {
     uint16_t spawnPoint = (uint16_t)(ctx->r4 & 0xFFFF);
 
     // --- replication: save previous map index ---
@@ -947,7 +921,7 @@ extern "C" RECOMP_PATCH void loadMapAtSpawnPoint(uint8_t* rdram, recomp_context*
 // Called by setupMap after dmaMapAssets; if grid data is NULL or points
 // outside valid RDRAM (0x80000000..0x80800000) skip the body.
 // ---------------------------------------------------------------------------
-extern "C" RECOMP_PATCH void setMapGrid(uint8_t* rdram, recomp_context* ctx) {
+extern "C" RECOMP_PATCH void legacy_setMapGrid(uint8_t* rdram, recomp_context* ctx) {
     gpr mapGrid_vaddr = ctx->r4;
     gpr data_vaddr    = ctx->r5;
 
@@ -984,7 +958,7 @@ extern "C" RECOMP_PATCH void setMapGrid(uint8_t* rdram, recomp_context* ctx) {
 // Since we fully replaced dmaMapAssets with our own implementation we must
 // also handle the normal path.
 // ---------------------------------------------------------------------------
-extern "C" RECOMP_PATCH void dmaMapAssets(uint8_t* rdram, recomp_context* ctx) {
+extern "C" RECOMP_PATCH void legacy_dmaMapAssets(uint8_t* rdram, recomp_context* ctx) {
     uint32_t mainMapIdx  = (uint32_t)ctx->r4 & 0xFFFF;
     uint32_t levelMapIdx = (uint32_t)ctx->r5 & 0xFFFF;
 
@@ -1069,7 +1043,7 @@ extern "C" RECOMP_PATCH void dmaMapAssets(uint8_t* rdram, recomp_context* ctx) {
 // ---------------------------------------------------------------------------
 // loadLevelMapObjects – stub for dummy/cinematic maps.
 // ---------------------------------------------------------------------------
-extern "C" RECOMP_PATCH void loadLevelMapObjects(uint8_t* rdram, recomp_context* ctx) {
+extern "C" RECOMP_PATCH void legacy_loadLevelMapObjects(uint8_t* rdram, recomp_context* ctx) {
     if (scene_has_no_world_geometry()) {
         ctx->r2 = 0;
         return;
@@ -1621,7 +1595,7 @@ extern "C" RECOMP_PATCH void setMainLoopCallbackFunctionIndex(uint8_t* rdram, re
 }
 
 // setMapAudioAndLighting – log branch taken.
-extern "C" RECOMP_PATCH void setMapAudioAndLighting(uint8_t* rdram, recomp_context* ctx) {
+extern "C" RECOMP_PATCH void legacy_setMapAudioAndLighting(uint8_t* rdram, recomp_context* ctx) {
     // gCutsceneCompletionFlags at 0x801891D4 (s32, big-endian word)
     constexpr uint32_t COMPL_VADDR = 0x801891D4u;
     int32_t csflags = *(int32_t*)(rdram + (COMPL_VADDR - 0x80000000u));
@@ -1665,7 +1639,7 @@ extern "C" RECOMP_PATCH void setMapAudioAndLighting(uint8_t* rdram, recomp_conte
 }
 
 // setLevelLighting – log entry and whether it calls setMainLoopCB.
-extern "C" RECOMP_PATCH void setLevelLighting(uint8_t* rdram, recomp_context* ctx) {
+extern "C" RECOMP_PATCH void legacy_setLevelLighting(uint8_t* rdram, recomp_context* ctx) {
     int16_t rate        = (int16_t)(ctx->r4 & 0xFFFF);
     uint16_t cb_arg     = (uint16_t)(ctx->r5 & 0xFFFF);
     uint16_t cb_before  = read_cb_idx(rdram);
@@ -1701,7 +1675,7 @@ extern "C" RECOMP_PATCH void setLevelLighting(uint8_t* rdram, recomp_context* ct
 // levelLoadCallback – called while cb=5 (LEVEL_LOAD).
 // Original waits for checkMapRGBADone() which needs a real loaded map.
 // For cinematic/dummy maps, advance immediately to gameLoopContext.callbackIndex.
-extern "C" RECOMP_PATCH void levelLoadCallback(uint8_t* rdram, recomp_context* ctx) {
+extern "C" RECOMP_PATCH void legacy_levelLoadCallback(uint8_t* rdram, recomp_context* ctx) {
     // gameLoopContext at 0x80205230: { u16 callbackIndex, u16 frameCount, ... }
     // callbackIndex is big-endian u16 at offset 0 → xor-2 lane
     constexpr uint32_t GLC_VADDR = 0x80205230u;
@@ -1852,7 +1826,7 @@ static const char* cs_opcode_name(uint16_t op) {
 //
 // Fix: when s_no_world_geometry, immediately advance past the wait.
 // ---------------------------------------------------------------------------
-extern "C" RECOMP_PATCH void cutsceneHandlerWaitRgbaFinished(uint8_t* rdram, recomp_context* ctx) {
+extern "C" RECOMP_PATCH void legacy_cutsceneHandlerWaitRgbaFinished(uint8_t* rdram, recomp_context* ctx) {
     uint16_t index = (uint16_t)(ctx->r4 & 0xFFFF);
 
     // CutsceneExecutor offsets (cutscene.h):

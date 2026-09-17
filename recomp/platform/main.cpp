@@ -99,6 +99,8 @@ extern "C" void setMainLoopCallbackFunctionIndex(uint8_t*, recomp_context*);
 extern "C" void setMapAudioAndLighting(uint8_t*, recomp_context*);
 extern "C" void setLevelLighting(uint8_t*, recomp_context*);
 extern "C" void levelLoadCallback(uint8_t*, recomp_context*);
+extern "C" void cutsceneHandlerDMASprite(uint8_t*, recomp_context*);
+extern "C" void cutsceneHandlerDoDMA(uint8_t*, recomp_context*);
 
 static void hm64_on_init(uint8_t* rdram, recomp_context* ctx) {
     // Zero out audio-library global state so audio fn-ptrs start NULL.
@@ -110,6 +112,8 @@ static void hm64_on_init(uint8_t* rdram, recomp_context* ctx) {
 
     // Patch the code segment data section from the decomp ELF.
     load_game_data(rdram);
+    recomp::overlays::add_loaded_function((int32_t)hm64::build::sym_cutsceneHandlerDMASprite, cutsceneHandlerDMASprite);
+    recomp::overlays::add_loaded_function((int32_t)hm64::build::sym_cutsceneHandlerDoDMA, cutsceneHandlerDoDMA);
 
     // Register patched functions in the overlay map so LOOKUP_FUNC indirect calls
     // (e.g. from mainLoopCallbacksTable) route to our versions, not the recompiled originals.

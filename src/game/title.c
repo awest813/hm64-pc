@@ -441,7 +441,7 @@ static inline bool handleFrameIncrement() {
         return 1;
 
     }
-    
+    return FALSE;
 }
 
 //INCLUDE_ASM("asm/nonmatchings/game/title", titleScreenMainLoopCallback);
