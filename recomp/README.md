@@ -152,6 +152,11 @@ to reach diary selection. WASD controls menu movement. Short keyboard presses ar
 retained until a game tick reads them, including analog-stick keys. Drawing and
 game updates are serialized to protect shared scene data during transitions.
 
+The opening dialogue now scrolls through automatically. Map tile commands stay
+within their stack allocations, preserving the registers used for NPC visibility.
+Message timers use their actual six-byte, two-byte-aligned type, avoiding the
+misaligned writes that stalled "Hey, have another drink" at its third line.
+
 The silent audio backend completes sequence requests instead of leaving playback
 flags set forever; opening cutscenes can therefore finish their audio waits.
 Audio playback and gameplay beyond the menus remain unfinished. Shutdown also
@@ -163,3 +168,13 @@ Run the headless input regression check without a ROM:
 cmake --build recomp/build --target hm64_input_test
 SDL_VIDEODRIVER=dummy ./recomp/build/hm64_input_test
 ```
+
+After generating the game code, run the rendering/dialogue regression check:
+
+```bash
+python3 tools/test_map_rendering.py
+```
+
+This runs the actual recompiled functions against synthetic memory: tile rendering
+must preserve caller registers, and a two-byte-aligned dialogue timer must scroll
+a line in 16 ticks. No ROM or captured game memory is loaded by the test.

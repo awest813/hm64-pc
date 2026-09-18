@@ -34,7 +34,10 @@ BASEROM := baserom.$(REGION).z64
 VERBOSE := 0
 PERMUTER ?= 0
 
-MODERN_GCC ?= 0
+# PC builds use the maintained system compiler tested with the native runtime.
+# Plain `make` retains the original compiler for decompilation work.
+MODERN_GCC ?= $(if $(filter pc recomp recomp-generate recomp-build,$(MAKECMDGOALS)),1,0)
+export MODERN_GCC
 
 .DEFAULT_GOAL := all
 
@@ -590,6 +593,17 @@ extract-font:
 
 # Main code segment
 
+# Rebuild code when switching between the original and PC compilers. Otherwise
+# make can silently reuse objects built with incompatible compiler settings.
+.PHONY: FORCE_COMPILER_CONFIG
+FORCE_COMPILER_CONFIG:
+
+$(BUILD_DIR)/compiler-config: FORCE_COMPILER_CONFIG
+	@mkdir -p $(BUILD_DIR)
+	@printf '%s\n' '$(CC) $(CC_FLAG) $(CFLAGS) $(CPPFLAGS)' > $@.tmp
+	@cmp -s $@.tmp $@ || cp $@.tmp $@
+	@rm -f $@.tmp
+
 $(BUILD_DIR)/src/mainproc.o: src/mainproc.c
 	$(MKDIR)
 	$(CC) $(CC_FLAG) $(OPTFLAGS) $(CFLAGS) $(DEBUG_FLAGS) $(CPPFLAGS) -c -o $@ $<
@@ -1133,6 +1147,8 @@ $(LD_SCRIPT): $(SPEC_PROCESSED) $(MKLDSCRIPT)
 	$(V)$(MKLDSCRIPT) $< $@
 
 # Final binary
+
+$(ALL_CODE_OBJECTS): $(BUILD_DIR)/compiler-config
 
 $(BASENAME).elf: preflight-decomp $(OBJECTS) $(LD_SCRIPT)
 	$(V)$(LD) $(LDFLAGS) -o $@

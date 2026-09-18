@@ -69,6 +69,31 @@ u32 getTextAddress(u16 index, u16 offset);
 void unpackFontCI2Data(u16, MessageBoxFont*, u8*);
 
 
+// Message timers occupy six bytes and may start at a two-byte boundary.
+// Casting them to the larger, four-byte-aligned Interpolator lets modern GCC
+// combine halfword stores into a misaligned word store, freezing text scrolling.
+void initializeMessageBoxInterpolator(MessageBoxInterpolator* timer, s16 rate, s16 frameRate) {
+    timer->rate = rate;
+    timer->frameRate = frameRate;
+    timer->accumulatedValue = 0;
+}
+
+s16 stepMessageBoxInterpolator(MessageBoxInterpolator* timer) {
+    s16 step;
+    if (timer->rate < 0) {
+        step = (timer->frameRate % -timer->rate) == 0;
+        timer->frameRate++;
+    } else {
+        step = timer->rate;
+    }
+    timer->accumulatedValue += step;
+    return step;
+}
+
+s16 getMessageBoxInterpolatorValue(MessageBoxInterpolator* timer) {
+    return timer->accumulatedValue;
+}
+
 //INCLUDE_ASM("asm/nonmatchings/system/message", initializeMessageBoxes);
 
 void initializeMessageBoxes(void) {
@@ -124,8 +149,8 @@ void initializeMessageBoxes(void) {
         messageBoxes[i].currentRGBA.b = 255.0f;
         messageBoxes[i].currentRGBA.a = 255.0f;
        
-        initializeInterpolator((Interpolator*)&messageBoxes[i].unk_64, 0, 0);
-        initializeInterpolator((Interpolator*)&messageBoxes[i].scrollInterpolator, 0, 0);
+        initializeMessageBoxInterpolator(&messageBoxes[i].textInterpolator, 0, 0);
+        initializeMessageBoxInterpolator(&messageBoxes[i].scrollInterpolator, 0, 0);
          
         messageBoxes[i].unk_9D = 0;
         
@@ -165,7 +190,7 @@ bool initializeEmptyMessageBox(u16 messageBoxIndex, u8* textBufferAddr) {
             
             messageBoxes[messageBoxIndex].flags = MESSAGE_BOX_ACTIVE;
 
-            initializeInterpolator((Interpolator*)&messageBoxes[messageBoxIndex].scrollInterpolator, 0, 0);
+            initializeMessageBoxInterpolator(&messageBoxes[messageBoxIndex].scrollInterpolator, 0, 0);
             setMessageBoxBaseRGBA(messageBoxIndex, 255, 255, 255, 255);
             
             set = TRUE;        
@@ -581,7 +606,7 @@ bool setMessageBoxInterpolationRate(u16 index, s16 rate) {
 
         messageBoxes[index].unk_7C = rate;
         
-        initializeInterpolator((Interpolator*)&messageBoxes[index].unk_64, rate, 0);
+        initializeMessageBoxInterpolator(&messageBoxes[index].textInterpolator, rate, 0);
         
         result = TRUE;
             
@@ -623,7 +648,7 @@ bool setMessageBoxInterpolationWithFlags(u16 index, s16 rate, u8 interpolationMo
         if (messageBoxes[index].flags & MESSAGE_BOX_ACTIVE) {
 
             messageBoxes[index].unk_7C = rate;
-            initializeInterpolator((Interpolator*)&messageBoxes[index].unk_64, rate, 0);
+            initializeMessageBoxInterpolator(&messageBoxes[index].textInterpolator, rate, 0);
 
             messageBoxes[index].flags &= ~(MESSAGE_BOX_INTERPOLATION_MODE_1 | MESSAGE_BOX_INTERPOLATION_MODE_2);
 
@@ -1128,7 +1153,7 @@ bool scrollMessageBoxDown(u16 index) {
 
             if (messageBoxes[index].totalLinesToPrint + 1 != messageBoxes[index].scrollCount + messageBoxes[index].textBoxVisibleRows) {
  
-                initializeInterpolator((Interpolator*)&messageBoxes[index].scrollInterpolator, messageBoxes[index].defaultScrollSpeed, 0);
+                initializeMessageBoxInterpolator(&messageBoxes[index].scrollInterpolator, messageBoxes[index].defaultScrollSpeed, 0);
 
                 messageBoxes[index].flags |= MESSAGE_BOX_SCROLLING_DOWN;
                 messageBoxes[index].flags &= ~MESSAGE_BOX_TEXT_END_REACHED;
@@ -1162,7 +1187,7 @@ bool scrollMessageBoxUp(u16 index) {
 
             if (messageBoxes[index].scrollCount) {
 
-                initializeInterpolator((Interpolator*)&messageBoxes[index].scrollInterpolator, messageBoxes[index].defaultScrollSpeed, 0);
+                initializeMessageBoxInterpolator(&messageBoxes[index].scrollInterpolator, messageBoxes[index].defaultScrollSpeed, 0);
 
                 messageBoxes[index].flags |= MESSAGE_BOX_SCROLLING_UP;
                 messageBoxes[index].flags &= ~MESSAGE_BOX_TEXT_END_REACHED;
@@ -1225,14 +1250,14 @@ u8 checkMessageBoxScrolled(u16 index) {
 
 void updateScrollDownAnimation(u16 index) {
 
-    calculateInterpolatorStep((Interpolator*)&messageBoxes[index].scrollInterpolator);
+    stepMessageBoxInterpolator(&messageBoxes[index].scrollInterpolator);
 
     // FIXME: probably a u16 return value
-    if ((u16)getInterpolatorValue((Interpolator*)&messageBoxes[index].scrollInterpolator) >= messageBoxes[index].fontContext.characterCellHeight + messageBoxes[index].lineSpacing) {
+    if ((u16)getMessageBoxInterpolatorValue(&messageBoxes[index].scrollInterpolator) >= messageBoxes[index].fontContext.characterCellHeight + messageBoxes[index].lineSpacing) {
 
         messageBoxes[index].flags &= ~MESSAGE_BOX_SCROLLING_DOWN;
          
-        initializeInterpolator((Interpolator*)&messageBoxes[index].scrollInterpolator, 0, 0);
+        initializeMessageBoxInterpolator(&messageBoxes[index].scrollInterpolator, 0, 0);
  
         messageBoxes[index].scrollCount++;
         messageBoxes[index].currentLineBeingPrinted--;
@@ -1245,13 +1270,13 @@ void updateScrollDownAnimation(u16 index) {
 
 void updateScrollUpAnimation(u16 index) {
 
-    calculateInterpolatorStep((Interpolator*)&messageBoxes[index].scrollInterpolator);
+    stepMessageBoxInterpolator(&messageBoxes[index].scrollInterpolator);
 
-    if ((u16)getInterpolatorValue((Interpolator*)&messageBoxes[index].scrollInterpolator) >= messageBoxes[index].fontContext.characterCellHeight + messageBoxes[index].lineSpacing) {
+    if ((u16)getMessageBoxInterpolatorValue(&messageBoxes[index].scrollInterpolator) >= messageBoxes[index].fontContext.characterCellHeight + messageBoxes[index].lineSpacing) {
 
         messageBoxes[index].flags &= ~MESSAGE_BOX_SCROLLING_UP;
         
-        initializeInterpolator((Interpolator*)&messageBoxes[index].scrollInterpolator, 0, 0);
+        initializeMessageBoxInterpolator(&messageBoxes[index].scrollInterpolator, 0, 0);
 
         messageBoxes[index].currentLineBeingPrinted--;
         
@@ -1668,10 +1693,10 @@ void updateMessageBoxText(u16 index) {
                                 
                         if (checkButtonHeld(CONTROLLER_1, messageBoxes[index].buttonMask) || (renderMode == 2)) {
                             // fast scroll if button held
-                            initializeInterpolator(&messageBoxes[index].scrollInterpolator, 4, 0);
+                            initializeMessageBoxInterpolator(&messageBoxes[index].scrollInterpolator, 4, 0);
                         } else {
                             // default scroll speed
-                            initializeInterpolator(&messageBoxes[index].scrollInterpolator, messageBoxes[index].defaultScrollSpeed, 0);
+                            initializeMessageBoxInterpolator(&messageBoxes[index].scrollInterpolator, messageBoxes[index].defaultScrollSpeed, 0);
                         }
                         
                         messageBoxes[index].flags |= MESSAGE_BOX_SCROLLING_DOWN;
@@ -1765,7 +1790,7 @@ void updateMessageBoxText(u16 index) {
                 
             case CHARACTER_CONTROL_WAIT:
                 
-                initializeInterpolator(&messageBoxes[index].unk_64, -(s16)*messageBoxes[index].currentCharPtr, 0);
+                initializeMessageBoxInterpolator(&messageBoxes[index].textInterpolator, -(s16)*messageBoxes[index].currentCharPtr, 0);
                 
                 messageBoxes[index].currentCharPtr++;
                 messageBoxes[index].flags |= MESSAGE_BOX_NEEDS_INTERPOLATOR_INIT;
@@ -1911,7 +1936,7 @@ void updateMessageBoxText(u16 index) {
             
     } 
     
-    calculateInterpolatorStep((Interpolator*)&messageBoxes[index].unk_64);
+    stepMessageBoxInterpolator(&messageBoxes[index].textInterpolator);
     
 }
 
@@ -2275,8 +2300,7 @@ static const Gfx D_8011EEC0 = gsSPEndDisplayList();
 
 static inline u8 updateMessageBoxRGBA(u16 i) {
     
-    // bug: never initialized
-    u8 count;
+    u8 count = 0;
 
     if (messageBoxes[i].targetRGBA.r < messageBoxes[i].currentRGBA.r) {
 
@@ -2427,7 +2451,7 @@ void updateMessageBox(void) {
 
                     if (!(messageBoxes[i].flags & (MESSAGE_BOX_SCROLLING_DOWN | MESSAGE_BOX_SCROLLING_UP))) {
 
-                        temp = calculateInterpolatorStep((Interpolator*)&messageBoxes[i].unk_64);
+                        temp = stepMessageBoxInterpolator(&messageBoxes[i].textInterpolator);
                         j = 0;
                         
                         if (checkButtonPressed(CONTROLLER_1, messageBoxes[i].buttonMask)) {
@@ -2445,7 +2469,7 @@ void updateMessageBox(void) {
                         while (j < temp) {
 
                             if (messageBoxes[i].flags & MESSAGE_BOX_NEEDS_INTERPOLATOR_INIT) {
-                                initializeInterpolator((Interpolator*)&messageBoxes[i].unk_64, messageBoxes[i].unk_7C, 0);
+                                initializeMessageBoxInterpolator(&messageBoxes[i].textInterpolator, messageBoxes[i].unk_7C, 0);
                                 messageBoxes[i].flags &= ~MESSAGE_BOX_NEEDS_INTERPOLATOR_INIT;    
                             }
 

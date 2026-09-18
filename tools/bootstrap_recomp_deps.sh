@@ -22,21 +22,39 @@ MANIFEST="$ROOT_DIR/tools/recomp-deps.manifest"
 [[ -s "$MANIFEST" ]] || fail "Missing dependency manifest: $MANIFEST"
 
 log "Checking vendored dependency files (including nested sources)..."
-missing=0
-count=0
-mapfile -t required_files < "$MANIFEST"
-for relative_path in "${required_files[@]}"; do
-    required_file="$ROOT_DIR/$relative_path"
-    if [[ -f "$required_file" ]]; then
-        count=$((count + 1))
-    else
-        printf '[recomp-bootstrap] MISSING %s\n' "${required_file#$ROOT_DIR/}" >&2
-        missing=1
-    fi
-done
+# Directory enumeration supplies file metadata in batches. Separate stat calls
+# for every file are particularly expensive on Windows-mounted WSL checkouts.
+python3 - "$ROOT_DIR" "$MANIFEST" <<'PY'
+from collections import defaultdict
+from pathlib import Path
+import os
+import sys
 
-if [[ "$missing" -ne 0 ]]; then
-    fail "One or more vendored dependency files are missing. Re-clone or re-download this repository."
-fi
+root, manifest = map(Path, sys.argv[1:])
+groups = defaultdict(list)
+for relative_path in manifest.read_text().splitlines():
+    path = Path(relative_path)
+    groups[path.parent].append(path.name)
 
-log "All $count vendored dependency files are present (including nested former submodules)."
+missing = []
+count = 0
+for parent, names in groups.items():
+    try:
+        with os.scandir(root / parent) as entries:
+            files = {entry.name for entry in entries if entry.is_file()}
+    except OSError:
+        files = set()
+    for name in names:
+        if name in files:
+            count += 1
+        else:
+            missing.append(parent / name)
+
+for path in missing:
+    print(f'[recomp-bootstrap] MISSING {path}', file=sys.stderr)
+if missing:
+    sys.exit('[recomp-bootstrap] error: One or more vendored dependency files are missing. '
+             'Re-clone or re-download this repository.')
+print(f'[recomp-bootstrap] All {count} vendored dependency files are present '
+      '(including nested former submodules).')
+PY

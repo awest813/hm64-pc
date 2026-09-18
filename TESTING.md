@@ -28,9 +28,11 @@ reference.  Keep the terminal open so you can capture any error output.
 Please verify the following in order:
 
 1. App launches and shows a window
-2. Title/menu flow appears
+2. Let the opening play without pressing Start. Characters should remain visible,
+   and the "Hey, have another drink" dialogue should scroll past its third line.
+   The opening should finish and reach the animated title.
 3. Keyboard controls respond:
-   - `Enter` on menu
+   - `Enter` at the title opens Play / How to Play; select Play to reach Select a Diary
    - movement inputs (WASD for analog, arrow keys for D-pad)
 4. Gamepad controls respond (if connected), including:
    - left stick movement
@@ -53,7 +55,7 @@ separate bug reports for each issue found.
 
 - [ ] HM64 logo renders correctly; no missing or corrupted sprites
 - [ ] "Press Start" / title animation plays without glitches
-- [ ] Pressing Start advances to the name-entry / new-game screen
+- [ ] Pressing Start opens Play / How to Play; selecting Play opens Select a Diary
 - [ ] On-screen text is legible; no character rendering issues
 
 ### 4b) Opening cutscene and tutorial day

@@ -1996,9 +1996,10 @@ u32 setTileVertices(MainMap* mainMap, u16 tileIndex, f32 x, f32 y, f32 z) {
 
 Gfx* prepareTileTextures(Gfx* dl, MainMap* mainMap, u8 textureIndex) {
 
-    TileBitmap bitmap;
+    // setBitmapFormat also writes pixelSize, beyond the smaller TileBitmap.
+    BitmapObject bitmap;
 
-    setBitmapFormat((BitmapObject*)&bitmap, getTexturePtr(textureIndex, mainMap->tileTextures), getPalettePtrType1(textureIndex, mainMap->tilePalettes));
+    setBitmapFormat(&bitmap, getTexturePtr(textureIndex, mainMap->tileTextures), getPalettePtrType1(textureIndex, mainMap->tilePalettes));
 
     gDPLoadTextureTile_4b(dl++, bitmap.timg, bitmap.fmt, bitmap.width, bitmap.height, 0, 0, bitmap.width - 1, bitmap.height - 1, 0, G_TX_NOMIRROR | G_TX_WRAP, G_TX_NOMIRROR | G_TX_WRAP, G_TX_NOMASK, G_TX_NOMASK, G_TX_NOLOD, G_TX_NOLOD);
     gDPLoadTLUT_pal16(dl++, 0, bitmap.pal);
@@ -2260,10 +2261,10 @@ Gfx* appendTileToDL(Gfx* dl, MainMap* mainMap, u16 tileIndex, f32 x, f32 y, f32 
     // ??
     count = setTileVertices(mainMap, tileIndex, x, *(f32*)&y, z);
 
-    // FIXME: might be a wrapper around gSPVertex
-    gSPVertex(&tempDl2 + 1, &tileVertices[gGraphicsBufferIndex][mainMap->mapState.startingVertex + mainMap->mapState.renderedVertexCount], mainMap->tiles[tileIndex].verticesPerTile, 0);
+    // Keep the command inside its object; writing one Gfx past it corrupts
+    // the saved registers used by renderTiles to populate the visibility grid.
+    gSPVertex(&tempDl2, &tileVertices[gGraphicsBufferIndex][mainMap->mapState.startingVertex + mainMap->mapState.renderedVertexCount], mainMap->tiles[tileIndex].verticesPerTile, 0);
 
-    tempDl2 = *(&tempDl2 + 1);
     *dl++ = tempDl2;
     
     mainMap->mapState.renderedVertexCount += count;

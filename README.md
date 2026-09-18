@@ -46,7 +46,7 @@ See [recomp/README.md](recomp/README.md) for port internals.
 | Keyboard controls | ✅ Working |
 | Gamepad controls | ✅ Working (includes C-button equivalents) |
 | Save file backend (`hm64.sav`) | ✅ Working |
-| Audio backend (SDL2) | ✅ Implemented, reliability still being tested |
+| Audio playback | 🔧 Silent backend; playback remains unfinished |
 | Full gameplay stability/progression validation | 🔧 In progress |
 | JP port parity | 📋 Planned |
 | Advanced PC settings UI/config | 📋 Planned |
@@ -140,6 +140,10 @@ pipeline — recommended as the single first-time command:
 ```sh
 make pc
 ```
+
+PC targets select `gcc-mips-linux-gnu` automatically. Compiler settings are tracked
+so an existing checkout rebuilds code when switching toolchains. The original
+GCC 2.7.2 remains available for decompilation work with `MODERN_GCC=0`.
 
 ### 7) Run
 

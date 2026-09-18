@@ -15,9 +15,10 @@ This list tracks currently known limitations for public testing.
 ## Runtime / Gameplay
 
 - Public testing is still early; full gameplay stability/progression validation is in progress.
-- Audio backend is implemented but reliability and edge cases are still under active testing.
-  - Audio latency can drift during extended sessions if the host system is briefly under load;
-    a queue-size cap (≈250 ms) is in place to throttle excess buffering.
+- Audio playback remains unfinished. The current silent backend completes sequence
+  requests so cutscenes do not wait indefinitely for music to finish.
+- Shutdown can race with the game thread during RDRAM teardown; graceful exit still
+  needs work.
 - In-game rendering correctness is under active validation; see the **Rendering** section below
   for specific known categories.
 

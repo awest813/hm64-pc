@@ -241,9 +241,7 @@ typedef struct {
     u8 *gameVariableStringPtr;
     Vec3f viewSpacePosition;
     MessageBoxFont fontContext; // 0x58
-    u16 unk_64; // interpolator (FIXME: should be Interpolator rgbaInterpolator spanning 0x64-0x73)
-    u16 frameCounter; // 0x66
-    u16 unk_68; // counter
+    MessageBoxInterpolator textInterpolator; // 0x64
     MessageBoxInterpolator scrollInterpolator; // 0x6A
     u32 characterPrintSfx;
     u32 unk_74; // Unknown SFX (follows same pattern as other SFX fields)
