@@ -12,6 +12,8 @@
 #include "input.h"
 #include "graphics.h"
 #include <algorithm>
+#include <mutex>
+extern std::mutex hm64_game_mutex;
 #include "hm64_runtime_data.h"
 #include "librecomp/game.hpp"
 #include "librecomp/addresses.hpp"
@@ -68,6 +70,7 @@ static constexpr uint32_t RETRACE_STACK_SIZE = 0x8000u;  // 32KB
 static constexpr uint32_t STEP_MAIN_LOOP_ADDR = 0x80205208u;
 
 void hm64_invoke_retrace_callback() {
+    std::lock_guard frame_lock(hm64_game_mutex);
     uint8_t* rdram = s_rdram.load(std::memory_order_acquire);
     if (rdram == nullptr || !s_retrace_registered.load(std::memory_order_acquire)) {
         return;
@@ -452,14 +455,18 @@ RECOMP_PATCH void nuGfxDisplayOn(uint8_t* rdram, recomp_context* ctx) {
 RECOMP_PATCH void nuGfxDisplayOff(uint8_t* rdram, recomp_context* ctx) {
 }
 
-// updateAudio – crashes when libmus handles are garbage (audio is fully stubbed).
-// Zero out any active sequence/sfx flags so the real body's loops are no-ops,
-// then return immediately.
+// The silent backend completes pending playback on the next game tick.
+// Cutscenes wait for these flags to clear before entering the title screen.
 RECOMP_PATCH void updateAudio(uint8_t* rdram, recomp_context* ctx) {
-    // gAudioSequences at 0x80117C00 (zeroed at init) — flags are u16 at offset 0.
-    // If any AUDIO_ACTIVE bit crept in via setLevelAudio, clear it.
-    // gSfx array is right after. Both were zeroed in hm64_on_init; stay silent.
-    (void)rdram; (void)ctx;
+    for (unsigned i = 0; i < 4; ++i) {
+        const gpr sequence = (gpr)(int32_t)(hm64::build::sym_gAudioSequences + i * 0x2C);
+        MEM_B(0x28, sequence) = 0;
+        MEM_H(0x2A, sequence) = 0;
+        const gpr sfx = (gpr)(int32_t)(hm64::build::sym_gSfx + i * 0x18);
+        MEM_B(0x14, sfx) = 0;
+        MEM_H(0x16, sfx) = 0;
+    }
+    (void)ctx;
 }
 
 // ---------------------------------------------------------------------------
@@ -484,7 +491,7 @@ RECOMP_PATCH void nuContDataGetExAll(uint8_t* rdram, recomp_context* ctx) {
     for (int i = 0; i < 4; ++i) {
         uint16_t buttons = 0;
         float x = 0, y = 0;
-        bool connected = hm64::input::get_input(i, &buttons, &x, &y);
+        bool connected = hm64::input::get_input(i, &buttons, &x, &y, true);
         gpr pad = ADD32(ctx->r4, i * 8);
         MEM_H(0, pad) = buttons;
         MEM_B(2, pad) = (int8_t)std::clamp(x * 127.0f, -80.0f, 80.0f);

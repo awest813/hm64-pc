@@ -1,20 +1,7 @@
 /**
- * title_patches.cpp – PC patches for title/startup path.
- *
- * Root problem: launchIntroCutscene(OPENING_LOGOS, spawnPoint=0x61) routes
- * through the normal map loader.  Map #53 (resolved from spawn 0x61) is an
- * all-0xFF sentinel blob — no real world geometry.  Feeding it through the
- * normal dmaMapAssets → setupMap → setMapGrid pipeline crashes.
- *
- * Clean solution (layered):
- *   1. loadMapAtSpawnPoint – top-level gate.  Detects dummy map by ID or
- *      spawn point, sets SCENEFLAG_NO_WORLD_GEOMETRY, leaves geometry ptrs
- *      NULL, and returns without touching dmaMapAssets at all.
- *   2. setMapGrid – null-safe guard for any remaining call paths.
- *   3. dmaMapAssets – sentinel-offset guard as a safety net.
- *   4. loadLevelMapObjects – stubbed; overlay sprite ROM addresses are
- *      garbage for dummy maps and would crash nuPiReadRom → drawFrame.
- *   5. drawFrame – logged wrapper so we can trace render crashes.
+ * Startup adapter for the native runtime. Game updates and VI drawing share
+ * hm64_game_mutex because the original N64 scheduler serialized their work.
+ * Legacy experiments below are no longer registered as game overrides.
  */
 
 #include "recomp.h"
@@ -23,6 +10,9 @@
 #include "librecomp/addresses.hpp"
 #include "ultramodern/ultramodern.hpp"
 #include <cstdio>
+#include <mutex>
+
+std::mutex hm64_game_mutex;
 #include <csignal>
 #include <cstring>
 #include <cstdint>
@@ -534,6 +524,7 @@ static void segv_handler(int, siginfo_t* si, void*) {
 // mainproc – skip N64 VI hardware setup.
 // ---------------------------------------------------------------------------
 extern "C" RECOMP_PATCH void mainproc(uint8_t* rdram, recomp_context* ctx) {
+    std::unique_lock initialization_lock(hm64_game_mutex);
     // Install crash handler so we know which update function causes SIGSEGV
     struct sigaction sa{};
     sa.sa_sigaction = segv_handler;
@@ -604,6 +595,7 @@ extern "C" RECOMP_PATCH void mainproc(uint8_t* rdram, recomp_context* ctx) {
                 hm64_get_s_rdram_addr(), (STEP_ML ^ 3u) - 0x80000000u);
         fflush(stderr);
 
+        initialization_lock.unlock();
         uint32_t iter = 0;
         while (true) {
             // Spin while stepMainLoop == 0 — use atomic load to see VI callback writes
@@ -613,6 +605,7 @@ extern "C" RECOMP_PATCH void mainproc(uint8_t* rdram, recomp_context* ctx) {
                 step_val = __atomic_load_n(step_ptr, __ATOMIC_ACQUIRE);
             }
 
+            std::lock_guard frame_lock(hm64_game_mutex);
             // Check D_8020564C skip counter
             uint16_t skip = *(uint16_t*)(rdram + ((D_8020564C ^ 2u) - 0x80000000u));
             uint16_t cb_idx = *(uint16_t*)(rdram + ((CB_IDX ^ 2u) - 0x80000000u));
@@ -816,7 +809,7 @@ extern "C" RECOMP_PATCH void mainproc(uint8_t* rdram, recomp_context* ctx) {
 
             // Preserve natural cutscene progression; do not force the title.
             // Reset stepMainLoop = 0.
-            rdram[(STEP_ML ^ 3u) - 0x80000000u] = 0;
+            __atomic_store_n(step_ptr, 0, __ATOMIC_RELEASE);
             iter++;
         }
     }

@@ -145,9 +145,21 @@ Cutscene DMA distinguishes original ROM offsets embedded in scripts from relocat
 ELF asset addresses. Native rendering explicitly selects F3DEX2 and waits for each
 display list to be parsed before its memory is reused.
 
-The September 17 WSL build passes. Native dialogue boxes and character portraits
-have been observed, resolving the completely black output. Full opening scenery
-and the title-to-main-menu transition remain unverified; the opening can stall
-waiting for an entity animation. Shutdown also needs work: a timed run exposed a
-game-thread access after RDRAM teardown. This is still a work-in-progress port,
-not a playable release.
+The September 18 WSL build renders the startup logo, opening, animated title,
+Play / How to Play menu, and Select a Diary screen through RT64. Press Enter
+(Start) to skip the opening, Enter again at the title, and Enter or C (A) on Play
+to reach diary selection. WASD controls menu movement. Short keyboard presses are
+retained until a game tick reads them, including analog-stick keys. Drawing and
+game updates are serialized to protect shared scene data during transitions.
+
+The silent audio backend completes sequence requests instead of leaving playback
+flags set forever; opening cutscenes can therefore finish their audio waits.
+Audio playback and gameplay beyond the menus remain unfinished. Shutdown also
+needs work: a timed run exposed a game-thread access after RDRAM teardown.
+
+Run the headless input regression check without a ROM:
+
+```bash
+cmake --build recomp/build --target hm64_input_test
+SDL_VIDEODRIVER=dummy ./recomp/build/hm64_input_test
+```

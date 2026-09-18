@@ -126,3 +126,9 @@ if(UNIX AND NOT APPLE)
     # definitions win over the duplicate stub definitions in the funcs_*.c files.
     target_link_options(hm64_pc PRIVATE -rdynamic -Wl,--allow-multiple-definition)
 endif()
+
+# Headless input regression check; no ROM or renderer initialization required.
+add_executable(hm64_input_test EXCLUDE_FROM_ALL tests/input_test.cpp platform/input.cpp)
+target_include_directories(hm64_input_test PRIVATE platform)
+target_link_libraries(hm64_input_test PRIVATE ultramodern SDL2::SDL2)
+target_compile_options(hm64_input_test PRIVATE -UNDEBUG)
